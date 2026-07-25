@@ -10,8 +10,9 @@ const s: Record<string, React.CSSProperties> = {
   },
   container: { display: "flex", maxWidth: 1200, margin: "0 auto", padding: "0 24px", gap: 40, position: "relative" as const },
   sidebar: {
-    width: 240, flexShrink: 0, position: "sticky" as const, top: 80, height: "fit-content",
-    background: "#0d0d0d", border: "1px solid #1f1f1f", borderRadius: 10, padding: "20px 0",
+    width: 240, flexShrink: 0, position: "sticky" as const, top: 80, maxHeight: "calc(100vh - 100px)",
+    overflowY: "auto" as const, background: "#0d0d0d", border: "1px solid #1f1f1f",
+    borderRadius: 10, padding: "20px 0",
   },
   sidebarTitle: { fontSize: 12, fontWeight: 700, color: "#666", textTransform: "uppercase" as const, letterSpacing: "0.1em", padding: "0 20px", marginBottom: 12 },
   tocItem: { 
@@ -27,7 +28,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   logo: { fontWeight: 700, fontSize: 18, color: "#4ade80", textDecoration: "none" },
   nav: { display: "flex", gap: 20, fontSize: 14, color: "#888" },
-  navLink: { color: "#888", textDecoration: "none", cursor: "pointer" },
+  navLink: { color: "#888", textDecoration: "none", cursor: "pointer", transition: "color 0.15s", padding: "4px 8px", borderRadius: 6 },
   hero: { padding: "40px 0", textAlign: "center" as const },
   h1: { fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 16, lineHeight: 1.1 },
   sub: { fontSize: 16, color: "#999", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 },
@@ -110,6 +111,7 @@ function CodeBlock({ children }: { children: string }) {
   return (
     <div style={s.codeBlockWrapper}>
       <button
+        className="btn-secondary"
         style={{ ...s.copyBtn, ...(copied ? s.copyBtnCopied : {}) }}
         onClick={handleCopy}
       >
@@ -121,7 +123,7 @@ function CodeBlock({ children }: { children: string }) {
 }
 
 function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return <Link href={href} style={s.navLink}>{children}</Link>;
+  return <Link href={href} className="link-landing" style={s.navLink}>{children}</Link>;
 }
 
 export default function DocsPage() {
@@ -157,7 +159,7 @@ export default function DocsPage() {
         </div>
       </header>
 
-      <div style={s.hero}>
+      <div className="docs-hero" style={s.hero}>
         <h1 style={s.h1}>Documentation</h1>
         <p style={s.sub}>
           Everything you need to know about TetherDesk — from first-time setup to advanced usage.
@@ -173,6 +175,7 @@ export default function DocsPage() {
             <a
               key={item.id}
               href={`#${item.id}`}
+              className="link-landing"
               style={{ ...s.tocItem, ...(activeId === item.id ? s.tocItemActive : {}) }}
               onClick={(e) => {
                 e.preventDefault();
@@ -195,27 +198,27 @@ export default function DocsPage() {
           </div>
           <div className="docs-grid" style={s.grid2}>
             <div style={s.card}>
-              <div style={s.cardTitle}>Step 1: Install</div>
+              <div style={s.cardTitle}>Step 1: Start Agent</div>
               <div style={s.cardDesc}>
-                Run <Code>npx tetherdesk start</Code> on your laptop. This downloads and starts the agent automatically.
+                Run <Code>npx tetherdesk start</Code> on your laptop. This starts a local web dashboard with a QR code for pairing.
               </div>
             </div>
             <div style={s.card}>
-              <div style={s.cardTitle}>Step 2: Get Key</div>
+              <div style={s.cardTitle}>Step 2: Open Dashboard</div>
               <div style={s.cardDesc}>
-                Your terminal shows a <Code>TD-XXXXXX</Code> one-time key and a QR code. Both contain the same pairing information.
+                Open the dashboard URL shown in the terminal. It displays a QR code that refreshes every 90 seconds.
               </div>
             </div>
             <div style={s.card}>
               <div style={s.cardTitle}>Step 3: Connect Phone</div>
               <div style={s.cardDesc}>
-                Open <Code>https://tetherdesk-five.vercel.app/access</Code> on your phone. Enter the <Code>TD-XXXXXX</Code> key or scan the QR code.
+                Open <Code>/access</Code> on your phone. Enter an access key or scan the QR code from the dashboard.
               </div>
             </div>
             <div style={s.card}>
               <div style={s.cardTitle}>Step 4: Approve</div>
               <div style={s.cardDesc}>
-                Your laptop shows an approval prompt. Click <span style={{ color: "#4ade80", fontWeight: 600 }}>Allow</span>. Your phone now has remote terminal access.
+                Your laptop shows an approval prompt. Click <span style={{ color: "#4ade80", fontWeight: 600 }}>Allow</span>. Your phone now has remote control access.
               </div>
             </div>
           </div>
@@ -268,10 +271,10 @@ tetherdesk start`}</CodeBlock>
               <div style={s.cardTitle}>One-Time Key (TD-XXXXXX)</div>
               <div style={s.cardDesc}>
                 <ul style={{ paddingLeft: 16, marginTop: 6 }}>
-                  <li>Auto-generated by <Code>tetherdesk start</Code></li>
+                  <li>Generated via <Code>tetherdesk pair</Code> or the dashboard QR</li>
                   <li>Expires after 90 seconds</li>
                   <li>Single-use — consumed after connect</li>
-                  <li>Shown alongside QR code in the terminal</li>
+                  <li>Enter on the access page as <Code>TD-</Code> + the pairing token</li>
                   <li>Best for: first-time setup, guest access, demos</li>
                 </ul>
               </div>
@@ -316,18 +319,18 @@ tetherdesk start`}</CodeBlock>
             <li>Approve on your laptop — done!</li>
           </ol>
           <div style={s.note}>
-            The QR code encodes a URL like <Code>https://tetherdesk-five.vercel.app/pair/BASE64URL</Code>. You can share this URL directly instead of scanning.
+            The QR code encodes a URL pointing to your backend (e.g., <Code>https://example.com/pair/BASE64URL</Code>). You can share this URL directly instead of scanning.
           </div>
 
           <h3 style={s.h3}>Method 2: One-Time Key (TD-XXXXXX)</h3>
           <p style={s.p}>
-            No camera needed. When you run <Code>tetherdesk start</Code>, the terminal displays a one-time key in the format <Code>TD-XXXXXX</Code> (where XXXXXX is a 6-character alphanumeric code). Enter this key on the access page.
+            No camera needed. Run <Code>tetherdesk pair</Code> on your laptop to get a pairing token. Then enter it on the access page with the <Code>TD-</Code> prefix as a one-time key.
           </p>
           <ol style={s.ul}>
-            <li>Run <Code>tetherdesk start</Code> on your laptop</li>
-            <li>Look for the line: <Code>Access Key: TD-XXXXXX</Code></li>
+            <li>Run <Code>tetherdesk pair</Code> on your laptop (agent must be running)</li>
+            <li>Note the <Code>pairing token</Code> displayed in the output</li>
             <li>Open <Code>/access</Code> on your phone</li>
-            <li>Type the key (with or without the <Code>TD-</Code> prefix)</li>
+            <li>Type <Code>TD-</Code> followed by the pairing token</li>
             <li>Click Connect — the phone redirects to the pairing page</li>
             <li>Approve on your laptop</li>
           </ol>
@@ -358,10 +361,9 @@ tetherdesk start`}</CodeBlock>
           </p>
           <ul style={s.ul}>
             <li><span style={{ color: "#ccc", fontWeight: 600 }}>QR Code</span> — refreshed every 90 seconds. Scan with your phone to pair.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>One-Time Key</span> — the <Code>TD-XXXXXX</Code> key paired with the current QR.</li>
             <li><span style={{ color: "#ccc", fontWeight: 600 }}>Approval Modal</span> — pops up when a phone tries to connect. Click Allow or Deny.</li>
             <li><span style={{ color: "#ccc", fontWeight: 600 }}>Activity Log</span> — real-time stream of pairing and WebRTC events via SSE.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>API Key Management</span> — generate, copy, list, and revoke persistent API keys.</li>
+            <li><span style={{ color: "#ccc", fontWeight: 600 }}>API Key Management</span> — generate and copy persistent API keys for repeat access.</li>
             <li><span style={{ color: "#ccc", fontWeight: 600 }}>Agent Status</span> — shows whether the local agent is running and connected.</li>
           </ul>
           <p style={s.p}>
@@ -450,12 +452,13 @@ tetherdesk start`}</CodeBlock>
             </div>
             <CodeBlock>{`npx tetherdesk start
 
-Output:
-  ✓ Agent initialized
-  ✓ Tunnel ready: https://xxx.trycloudflare.com
-  ✓ Pairing URL: https://tetherdesk-five.vercel.app/pair/BASE64URL
-    Access Key: TD-A1B2C3
-    Scan QR or enter the key on your phone`}</CodeBlock>
+ TetherDesk is running!
+
+  1. Open the dashboard:  http://localhost:3000
+  2. Scan the QR code on your phone
+  3. Tap Allow on this laptop to approve the connection
+
+ Press Ctrl+C to stop all processes.`}</CodeBlock>
           </div>
 
           <div style={s.card}>
@@ -468,8 +471,17 @@ Output:
           <div style={s.card}>
             <div style={s.cardTitle}>tetherdesk pair</div>
             <div style={s.cardDesc}>
-              Start a new pairing session without restarting the agent. Generates a fresh QR code and one-time key.
+              Start a new pairing session without restarting the agent. Displays a pairing token you can enter on the access page with the prefix <Code>TD-</Code> followed by the token.
             </div>
+            <CodeBlock>{`tetherdesk pair
+
+Pairing session started!
+
+Pairing token: abc123...
+Session ID:    xyz789...
+
+The agent will display a QR code in its terminal output.
+Run 'tetherdesk logs' to view it.`}</CodeBlock>
           </div>
 
           <div style={s.card}>
@@ -492,7 +504,7 @@ tetherdesk config backendUrl https://example.com  # set backend URL`}</CodeBlock
           <div style={s.card}>
             <div style={s.cardTitle}>tetherdesk devices</div>
             <div style={s.cardDesc}>
-              List all paired devices with their public keys and last connection times.
+              List all paired devices and their connection status.
             </div>
           </div>
 
@@ -568,10 +580,10 @@ tetherdesk config backendUrl https://example.com  # set backend URL`}</CodeBlock
         <div style={s.footer}>
           <p>TetherDesk — Open source remote terminal access</p>
           <div style={{ marginTop: 8, display: "flex", justifyContent: "center", gap: 20 }}>
-            <Link href="/" style={{ color: "#555", textDecoration: "none" }}>Home</Link>
-            <Link href="/access" style={{ color: "#555", textDecoration: "none" }}>Access</Link>
-            <Link href="/dashboard" style={{ color: "#555", textDecoration: "none" }}>Dashboard</Link>
-            <a href="https://github.com/wi5nuu/Tetherdesk" style={{ color: "#555", textDecoration: "none" }} target="_blank" rel="noopener noreferrer">GitHub</a>
+            <Link href="/" className="link-landing" style={{ color: "#555", textDecoration: "none" }}>Home</Link>
+            <Link href="/access" className="link-landing" style={{ color: "#555", textDecoration: "none" }}>Access</Link>
+            <Link href="/dashboard" className="link-landing" style={{ color: "#555", textDecoration: "none" }}>Dashboard</Link>
+            <a href="https://github.com/wi5nuu/Tetherdesk" className="link-landing" style={{ color: "#555", textDecoration: "none" }} target="_blank" rel="noopener noreferrer">GitHub</a>
           </div>
         </div>
       </div>
