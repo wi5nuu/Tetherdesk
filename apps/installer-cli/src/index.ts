@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";

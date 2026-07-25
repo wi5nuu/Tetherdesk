@@ -22,9 +22,8 @@
 }
 
 html, body {
-  height: 100%;
+  min-height: 100%;
   width: 100%;
-  overflow: hidden;
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
@@ -36,14 +35,6 @@ html, body {
 body {
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none;
-}
-
-/* Allow text selection only in inputs */
-input, textarea {
-  user-select: text;
-  -webkit-user-select: text;
-  touch-action: auto;
 }
 
 /* Spinner animation used by page.tsx inline styles */

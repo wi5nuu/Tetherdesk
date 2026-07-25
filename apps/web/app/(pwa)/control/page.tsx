@@ -760,6 +760,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     outline: "none",
     overflow: "hidden",
+    touchAction: "none",
   },
   statusBar: {
     display: "flex",
