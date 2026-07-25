@@ -48,7 +48,7 @@ program
   });
 
 program
-  .command("start")
+  .command("start", { isDefault: true })
   .description("Start tunnel + backend + agent for local use (dev mode)")
   .option("--domain <url>", "Use a fixed backend URL instead of a new Cloudflare tunnel")
   .action(async (options: { domain?: string }) => {
