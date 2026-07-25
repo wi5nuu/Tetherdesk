@@ -4,6 +4,7 @@ import { ErrorCode } from "@tetherdesk/protocol";
 import { getRedis } from "@/lib/redis";
 import { redisKeys } from "@/lib/keys";
 import { randomBytes } from "node:crypto";
+import { generateSessionId } from "@/lib/ids";
 
 export const runtime = "nodejs";
 export const maxDuration = 10;
@@ -42,25 +43,41 @@ function keyLabel(key: string): string {
 
 // ---------------------------------------------------------------------------
 // POST /api/access/keys — create a new API key
-// Body: { sessionId: string }
+// Body: { sessionId?: string }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const body = await parseBody(request);
-  if (!body || typeof body.sessionId !== "string" || !body.sessionId) {
-    return jsonError(ErrorCode.VALIDATION_FAILED, "sessionId is required");
-  }
-
-  const { sessionId } = body;
   const redis = getRedis();
 
-  // Verify the session exists
-  const sessionKey = redisKeys.session(sessionId);
-  const session = await redis.hgetall<Record<string, string>>(sessionKey);
-  if (!session || !session.bearerToken) {
-    return jsonError(ErrorCode.UNAUTHORIZED, "Session not found or expired");
+  let sessionId: string;
+
+  if (body && typeof body.sessionId === "string" && body.sessionId) {
+    sessionId = body.sessionId;
+    // Verify the session exists (but don't require bearerToken — API keys
+    // are self-authenticating and work independently of any agent session)
+    const sessionKey = redisKeys.session(sessionId);
+    const exists = await redis.exists(sessionKey);
+    if (!exists) {
+      // Session expired or doesn't exist — generate a fresh one
+      sessionId = generateSessionId();
+      const now = Date.now();
+      await redis.hset(redisKeys.session(sessionId), {
+        state: "pending",
+        createdAt: now,
+        lastActiveAt: now,
+      });
+    }
+  } else {
+    // No session provided — create a standalone API key with its own session
+    sessionId = generateSessionId();
+    const now = Date.now();
+    await redis.hset(redisKeys.session(sessionId), {
+      state: "pending",
+      createdAt: now,
+      lastActiveAt: now,
+    });
   }
 
-  // Generate and store the key
   const apiKey = generateApiKey();
   const now = new Date().toISOString();
 

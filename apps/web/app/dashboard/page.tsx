@@ -270,16 +270,12 @@ export default function HomePage() {
   const generateApiKeyHandler = useCallback(async () => {
     setApiKeyError(null);
     setApiKey(null);
-    const sid = currentSessionIdRef.current;
-    if (!sid) {
-      setApiKeyError("No active session. Pair with a phone first.");
-      return;
-    }
     try {
+      const sid = currentSessionIdRef.current;
       const resp = await fetch("/api/access/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: sid }),
+        body: JSON.stringify(sid ? { sessionId: sid } : {}),
       });
       const data = (await resp.json()) as { ok: boolean; data?: { apiKey: string }; error?: { message: string } };
       if (data.ok && data.data) {

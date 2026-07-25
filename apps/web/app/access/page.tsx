@@ -40,12 +40,27 @@ const s: Record<string, React.CSSProperties> = {
     cursor: "pointer", marginTop: 16, transition: "opacity 0.15s",
   },
   btnDisabled: { opacity: 0.5, cursor: "not-allowed" },
+  btnSecondary: {
+    width: "100%", padding: "12px", background: "transparent", color: "#e0e0e0",
+    border: "1px solid #2a2a2a", borderRadius: 8, fontSize: 15, fontWeight: 500,
+    cursor: "pointer", marginTop: 8, transition: "opacity 0.15s",
+  },
   checkbox: { display: "flex", alignItems: "center", gap: 8, marginTop: 12, cursor: "pointer", fontSize: 13, color: "#888" },
   footer: { display: "flex", justifyContent: "center", gap: 24, marginTop: 32, fontSize: 13 },
   link: { color: "#555", textDecoration: "none", cursor: "pointer" },
   error: { fontSize: 13, color: "#f87171", marginTop: 8 },
   hint: { fontSize: 12, color: "#555", marginTop: 12, lineHeight: 1.5, textAlign: "center" as const },
   sub: { fontSize: 14, color: "#666", textAlign: "center" as const, marginBottom: 28 },
+  setup: {
+    marginTop: 24, paddingTop: 20, borderTop: "1px solid #1f1f1f",
+    fontSize: 13, color: "#666", lineHeight: 1.6, textAlign: "center" as const,
+  },
+  setupCode: {
+    display: "inline-block", fontFamily: '"SF Mono", "Fira Code", monospace',
+    fontSize: 12, color: "#4ade80", background: "#0a0a0a",
+    padding: "6px 12px", borderRadius: 6, marginTop: 8,
+  },
+  setupStep: { fontSize: 13, color: "#555", marginTop: 8, lineHeight: 1.5, textAlign: "center" as const },
 };
 
 export default function AccessPage() {
@@ -130,15 +145,34 @@ export default function AccessPage() {
           </button>
         </form>
 
-        <p style={s.hint}>
-          One-Time Key shown in your terminal when you run <strong style={{ color: "#888" }}>tetherdesk start</strong>
-          .<br />
-          Persistent API keys can be created from your dashboard.
-        </p>
+        <div style={s.setup}>
+          <div style={{ fontWeight: 600, color: "#888", marginBottom: 12 }}>How to get a key</div>
+
+          <div style={{ fontWeight: 500, fontSize: 12, color: "#888" }}>Option A: Persistent API Key</div>
+          <div style={s.setupStep}>
+            Open{" "}
+            <Link href="/dashboard" style={{ color: "#4ade80", textDecoration: "none" }}>
+              dashboard
+            </Link>{" "}
+            on your laptop, click <strong style={{ color: "#888" }}>Generate Key</strong>, then enter the <strong style={{ color: "#888" }}>sk-xxx</strong> key here.
+          </div>
+
+          <div style={{ fontWeight: 500, fontSize: 12, color: "#888", marginTop: 16 }}>Option B: One-Time Key</div>
+          <div style={s.setupStep}>
+            Run this on your computer:
+          </div>
+          <div style={s.setupCode}>npx tetherdesk start</div>
+          <div style={s.setupStep}>
+            A <strong style={{ color: "#888" }}>TD-XXXXXX</strong> key appears in the terminal. Enter it here.
+          </div>
+        </div>
+
       </div>
 
       <div style={s.footer}>
         <Link href="/" style={s.link}>Home</Link>
+        <span style={{ color: "#333" }}>·</span>
+        <Link href="/dashboard" style={s.link}>Dashboard</Link>
         <span style={{ color: "#333" }}>·</span>
         <a href="https://github.com/wi5nuu/Tetherdesk#readme" style={s.link} target="_blank" rel="noopener noreferrer">Docs</a>
       </div>
