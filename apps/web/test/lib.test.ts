@@ -16,8 +16,8 @@ describe("constants", () => {
     expect(SESSION_TTL_SECONDS).toBe(24 * 60 * 60);
   });
 
-  it("rate limit max attempts is 5", () => {
-    expect(RATE_LIMIT_MAX_ATTEMPTS).toBe(5);
+  it("rate limit max attempts is 30", () => {
+    expect(RATE_LIMIT_MAX_ATTEMPTS).toBe(30);
   });
 });
 
