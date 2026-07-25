@@ -8,12 +8,10 @@ const nextConfig = {
     // Ensure monorepo workspace packages are resolved correctly
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@tetherdesk/crypto': require.resolve('@tetherdesk/crypto'),
-      '@tetherdesk/protocol': require.resolve('@tetherdesk/protocol'),
     };
     
     return config;
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
