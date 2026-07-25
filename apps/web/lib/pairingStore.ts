@@ -1,10 +1,10 @@
-import { getRedis } from "./redis.js";
-import { redisKeys } from "./keys.js";
+import { getRedis } from "./redis";
+import { redisKeys } from "./keys";
 import {
   PAIRING_TOKEN_TTL_SECONDS,
   PAIRING_TOKEN_USED_TOMBSTONE_TTL_SECONDS,
   SESSION_TTL_SECONDS,
-} from "./constants.js";
+} from "./constants";
 
 export interface PairingRecord {
   laptopPubKey: string;

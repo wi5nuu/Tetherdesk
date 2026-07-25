@@ -1,6 +1,6 @@
-import { getRedis } from "./redis.js";
-import { redisKeys } from "./keys.js";
-import { RATE_LIMIT_MAX_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS } from "./constants.js";
+import { getRedis } from "./redis";
+import { redisKeys } from "./keys";
+import { RATE_LIMIT_MAX_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS } from "./constants";
 
 export interface RateLimitResult {
   allowed: boolean;

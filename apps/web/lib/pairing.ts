@@ -1,11 +1,11 @@
 import { ErrorCode, type ErrorCode as ErrorCodeType } from "@tetherdesk/protocol";
 import { signSessionToken } from "@tetherdesk/crypto";
-import { generatePairingToken, generateSessionId } from "./ids.js";
-import { createPairingAndSessionRecords, updateSessionRecord, consumePairingToken } from "./pairingStore.js";
-import { pushToMailbox } from "./mailbox.js";
-import { getJwtSigningSecret } from "./authSecret.js";
-import { SESSION_BEARER_TOKEN_TTL_SECONDS } from "./constants.js";
-import type { PairingConfirmInput, PairingStartInput } from "./validation.js";
+import { generatePairingToken, generateSessionId } from "./ids";
+import { createPairingAndSessionRecords, updateSessionRecord, consumePairingToken } from "./pairingStore";
+import { pushToMailbox } from "./mailbox";
+import { getJwtSigningSecret } from "./authSecret";
+import { SESSION_BEARER_TOKEN_TTL_SECONDS } from "./constants";
+import type { PairingConfirmInput, PairingStartInput } from "./validation";
 
 export interface StartPairingResult {
   sessionId: string;

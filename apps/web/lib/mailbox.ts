@@ -1,6 +1,6 @@
-import { getRedis } from "./redis.js";
-import { redisKeys } from "./keys.js";
-import { MAILBOX_MESSAGE_TTL_SECONDS } from "./constants.js";
+import { getRedis } from "./redis";
+import { redisKeys } from "./keys";
+import { MAILBOX_MESSAGE_TTL_SECONDS } from "./constants";
 
 /**
  * Signaling mailbox (Section 9.1 `td:mailbox:*`, Section 7.2/7.3).

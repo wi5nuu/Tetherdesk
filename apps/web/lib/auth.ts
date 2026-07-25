@@ -1,5 +1,5 @@
 import { verifySessionToken, SessionTokenInvalidError, type SessionTokenClaims } from "@tetherdesk/crypto";
-import { getJwtSigningSecret } from "./authSecret.js";
+import { getJwtSigningSecret } from "./authSecret";
 
 export type AuthResult = { ok: true; claims: SessionTokenClaims } | { ok: false };
 

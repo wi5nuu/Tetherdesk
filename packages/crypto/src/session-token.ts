@@ -41,9 +41,9 @@ export async function verifySessionToken(
   let payload;
   try {
     ({ payload } = await jwtVerify(token, signingSecret));
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof joseErrors.JOSEError) {
-      throw new SessionTokenInvalidError(error.message);
+      throw new SessionTokenInvalidError((error as Error).message);
     }
     throw error;
   }
