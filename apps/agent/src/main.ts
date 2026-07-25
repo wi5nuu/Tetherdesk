@@ -38,7 +38,7 @@ async function loadConfig(): Promise<AgentConfigFile> {
       ...(typeof obj.backendOrigin === "string" ? { backendOrigin: obj.backendOrigin } : {}),
       ...(typeof obj.agentSecret === "string" ? { agentSecret: obj.agentSecret } : {}),
     };
-  } catch (err) {
+  } catch {
     // File doesn't exist or JSON is malformed — not fatal, return empty config
     return {};
   }

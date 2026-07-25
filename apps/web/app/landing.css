@@ -1,0 +1,83 @@
+/* Landing page styles — loaded via layout.tsx */
+.landing-card {
+  background: #111;
+  border: 1px solid #1f1f1f;
+  border-radius: 12px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.landing-card:hover {
+  border-color: #2a2a2a;
+  transform: translateY(-2px);
+}
+.landing-terminal {
+  background: #0a0a0a;
+  border: 1px solid #1f1f1f;
+  border-radius: 10px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  overflow: hidden;
+}
+.landing-terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #111;
+  border-bottom: 1px solid #1f1f1f;
+}
+.landing-terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.landing-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.landing-table th,
+.landing-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #1a1a1a;
+}
+.landing-table th {
+  color: #888;
+  font-weight: 500;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.landing-table td {
+  color: #ccc;
+  font-size: 14px;
+}
+.landing-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+.landing-check {
+  color: #4ade80;
+  font-size: 16px;
+}
+.landing-cross {
+  color: #555;
+  font-size: 16px;
+}
+@media (min-width: 768px) {
+  .landing-nav-desktop { display: flex !important; }
+  .landing-menu-btn { display: none !important; }
+  .landing-table th,
+  .landing-table td {
+    padding: 14px 20px;
+  }
+}
+@media (max-width: 767px) {
+  .landing-nav-desktop { display: none !important; }
+  .landing-menu-btn { display: flex !important; }
+  .landing-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .landing-table {
+    min-width: 600px;
+  }
+}

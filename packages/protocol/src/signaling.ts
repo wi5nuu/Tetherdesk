@@ -17,12 +17,56 @@ export type SignalingPayload =
   | { t: "sdp-answer"; sdp: string }
   | { t: "ice-candidate"; candidate: string; sdpMid: string | null; sdpMLineIndex: number | null };
 
+/* ------------------------------------------------------------------ */
+/*  Pairing QR code / URL helpers                                      */
+/* ------------------------------------------------------------------ */
+
+/** Encode the payload as a URL the phone can open directly.
+ *  `{backendOrigin}/pair/{base64url(JSON)}` */
 export function encodePairingQrPayload(payload: PairingQrPayload): string {
-  return JSON.stringify(payload);
+  const json = JSON.stringify(payload);
+  const b64url = Buffer.from(json, "utf8").toString("base64url");
+  return `${payload.backendOrigin}/pair/${b64url}`;
 }
 
+/** Decode a URL, raw JSON, or bare base64url token back into a payload. */
 export function decodePairingQrPayload(raw: string): PairingQrPayload {
-  const parsed: unknown = JSON.parse(raw);
+  const json = extractJson(raw);
+  return parseAndValidate(json);
+}
+
+/** Try to extract the JSON string from a URL, base64url token, or raw JSON. */
+function extractJson(raw: string): string {
+  const trimmed = raw.trim();
+
+  // URL format: https://host/pair/{base64url}
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    const match = trimmed.match(/\/pair\/([^/?#]+)/);
+    if (!match || match[1] === undefined) throw new TypeError("malformed pairing URL: expected /pair/<token> path");
+    return base64urlDecode(decodeURIComponent(match[1]));
+  }
+
+  // Raw JSON (backward compat with older QR codes)
+  if (trimmed.startsWith("{")) return trimmed;
+
+  // Assume it's a bare base64url token
+  return base64urlDecode(trimmed);
+}
+
+function base64urlDecode(b64url: string): string {
+  const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+  return atob(padded);
+}
+
+/** Parse a JSON string and validate the required fields. */
+function parseAndValidate(json: string): PairingQrPayload {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new TypeError("malformed pairing QR payload: invalid JSON");
+  }
   if (typeof parsed !== "object" || parsed === null) {
     throw new TypeError("malformed pairing QR payload");
   }

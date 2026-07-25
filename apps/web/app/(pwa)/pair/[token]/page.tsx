@@ -9,6 +9,7 @@ import {
   fromBase64Url,
   deriveSessionKey,
 } from "@tetherdesk/crypto";
+import { decodePairingQrPayload, type PairingQrPayload } from "@tetherdesk/protocol";
 
 // jsQR is loaded dynamically to avoid SSR issues with canvas APIs
 type JsQR = (data: Uint8ClampedArray, width: number, height: number) => { data: string } | null;
@@ -61,15 +62,8 @@ async function decodeJsQR(
 // Pairing handshake (shared between camera-scan and URL-token paths)
 // ---------------------------------------------------------------------------
 
-interface QrPayload {
-  backendOrigin: string;
-  pairingToken: string;
-  sessionId: string;
-  laptopEphemeralPubKey: string;
-}
-
 async function runPairingHandshake(
-  payload: QrPayload,
+  payload: PairingQrPayload,
   setState: (s: PairingState) => void,
   router: ReturnType<typeof useRouter>,
 ) {
@@ -242,13 +236,7 @@ export default function PairPage() {
 
     async function runFromUrl() {
       try {
-        const raw = decodeURIComponent(params.token!);
-        // BUG-M: atob() requires standard base64 with = padding. Base64url strings
-        // omit padding, so we must restore it before calling atob(), otherwise strings
-        // whose length is not a multiple of 4 throw "Invalid character" DOMException.
-        const b64 = raw.replace(/-/g, "+").replace(/_/g, "/");
-        const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
-        const payload = JSON.parse(atob(padded)) as QrPayload;
+        const payload = decodePairingQrPayload(params.token!);
         await runPairingHandshake(payload, setState, router);
       } catch (err) {
         setState({
@@ -303,7 +291,7 @@ export default function PairPage() {
         if (qrData) {
           stopCamera();
           try {
-            const payload = JSON.parse(qrData) as QrPayload;
+            const payload = decodePairingQrPayload(qrData);
             await runPairingHandshake(payload, setState, router);
           } catch {
             setState({ phase: "error", message: "QR code is not a valid TetherDesk pairing code." });

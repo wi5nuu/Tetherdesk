@@ -1,1131 +1,394 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { generateX25519KeyPair, toBase64Url } from "@tetherdesk/crypto";
+import { useState } from "react";
+import Link from "next/link";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+/* ------------------------------------------------------------------ */
+/*  Styles                                                             */
+/* ------------------------------------------------------------------ */
 
-type QrPhase =
-  | { phase: "loading" }
-  | { phase: "ready"; qrDataUrl: string; pairingUrl: string; expiresAt: number }
-  | { phase: "error"; message: string };
-
-type ApprovalPhase =
-  | { status: "idle" }
-  | { status: "pending"; sessionId: string; requestedAt: number }
-  | { status: "approved"; sessionId: string }
-  | { status: "declined"; sessionId: string };
-
-type ActivityEvent = {
-  id: string;
-  ts: number;
-  level: "info" | "warn" | "error" | "success";
-  stage: "agent" | "pairing" | "keyexchange" | "approval" | "webrtc" | "connection" | "system";
-  message: string;
-  sessionId?: string;
+const t = {
+  page: { background: "#0a0a0a", color: "#e0e0e0", fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', minHeight: "100dvh", overflowX: "hidden" as const } as React.CSSProperties,
+  wrap: { maxWidth: 1100, margin: "0 auto", padding: "0 20px" } as React.CSSProperties,
+  ac: { color: "#4ade80" } as React.CSSProperties,
+  dim: { color: "#666" } as React.CSSProperties,
+  muted: { color: "#888" } as React.CSSProperties,
+  mono: { fontFamily: '"SF Mono", "Fira Code", "Roboto Mono", monospace' } as React.CSSProperties,
+  btn: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 8, fontWeight: 600, fontSize: 15, cursor: "pointer", border: "none", transition: "all 0.15s", textDecoration: "none" } as React.CSSProperties,
+  btnPrimary: { background: "#4ade80", color: "#0a0a0a" } as React.CSSProperties,
+  btnOutline: { background: "transparent", color: "#e0e0e0", border: "1px solid #2a2a2a" } as React.CSSProperties,
+  section: { padding: "80px 0" } as React.CSSProperties,
+  sectionAlt: { padding: "80px 0", borderTop: "1px solid #141414" } as React.CSSProperties,
+  h2: { fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 700, marginBottom: 12, letterSpacing: "-0.02em" } as React.CSSProperties,
+  h3: { fontSize: 20, fontWeight: 600, marginBottom: 8 } as React.CSSProperties,
+  p: { fontSize: 15, lineHeight: 1.6, color: "#888", maxWidth: 600 } as React.CSSProperties,
+  center: { textAlign: "center" as const } as React.CSSProperties,
+  flexCenter: { display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
+  grid3: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24, marginTop: 48 } as React.CSSProperties,
+  grid2: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginTop: 48 } as React.CSSProperties,
 };
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const APP_VERSION = "2.1.21";
 
-function getBackendOrigin(): string {
-  if (typeof window === "undefined") return "";
-  return window.location.origin;
-}
+/* ------------------------------------------------------------------ */
+/*  Components                                                         */
+/* ------------------------------------------------------------------ */
 
-async function getQrOrigin(): Promise<string> {
-  const origin = window.location.origin;
-  if (!origin.includes("localhost") && !origin.includes("127.0.0.1")) return origin;
-  try {
-    const resp = await fetch("/api/lan-ip", { cache: "no-store" });
-    if (resp.ok) {
-      const data = (await resp.json()) as { ok: boolean; data?: { lanIp: string; port: number } };
-      if (data.ok && data.data?.lanIp) return `http://${data.data.lanIp}:${data.data.port}`;
-    }
-  } catch { /* fall through */ }
-  return origin;
-}
-
-function stageLabel(stage: ActivityEvent["stage"]): string {
-  const map: Record<ActivityEvent["stage"], string> = {
-    agent: "Agent", pairing: "Pairing", keyexchange: "Key Exchange",
-    approval: "Approval", webrtc: "WebRTC", connection: "Connection", system: "System",
-  };
-  return map[stage] ?? stage;
-}
-
-function levelColor(level: ActivityEvent["level"]): string {
-  return { info: "#60a5fa", warn: "#fbbf24", error: "#f87171", success: "#4ade80" }[level];
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
-export default function HomePage() {
-  const [qr, setQr] = useState<QrPhase>({ phase: "loading" });
-  const [timeLeft, setTimeLeft] = useState(90);
-  const [approval, setApproval] = useState<ApprovalPhase>({ status: "idle" });
-  const [agentOnline, setAgentOnline] = useState(false);
-  const [events, setEvents] = useState<ActivityEvent[]>([]);
-
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const refreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const approvalPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const currentSessionIdRef = useRef<string | null>(null);
-  const laptopJwtRef = useRef<string | null>(null);
-  const logEndRef = useRef<HTMLDivElement | null>(null);
-
-  // --------------------------------------------------------------------------
-  // SSE activity log
-  // --------------------------------------------------------------------------
-  useEffect(() => {
-    const es = new EventSource("/api/events");
-    es.onmessage = (e: MessageEvent) => {
-      try {
-        const evt = JSON.parse(e.data as string) as ActivityEvent;
-        setEvents((prev) => {
-          const next = [...prev, evt];
-          return next.length > 100 ? next.slice(-100) : next;
-        });
-      } catch { /* ignore malformed */ }
-    };
-    return () => es.close();
-  }, []);
-
-  // Auto-scroll log to bottom
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [events]);
-
-  // --------------------------------------------------------------------------
-  // Approval polling — runs whenever there's a sessionId to watch
-  // --------------------------------------------------------------------------
-  const startApprovalPolling = useCallback((sessionId: string) => {
-    if (approvalPollRef.current) clearInterval(approvalPollRef.current);
-    currentSessionIdRef.current = sessionId;
-
-    const poll = async () => {
-      if (currentSessionIdRef.current !== sessionId) return;
-      try {
-        const resp = await fetch(
-          `/api/pairing/approval?sessionId=${encodeURIComponent(sessionId)}`,
-          { cache: "no-store" },
-        );
-        if (!resp.ok) return; // 404 = no request yet, keep polling
-        const json = (await resp.json()) as {
-          ok: boolean;
-          data?: { status: "pending" | "approved" | "declined"; sessionId?: string; requestedAt?: number };
-        };
-        if (!json.ok || !json.data) return;
-        const { status, requestedAt } = json.data;
-
-        if (status === "pending") {
-          setApproval({ status: "pending", sessionId, requestedAt: requestedAt ?? Date.now() });
-        } else if (status === "approved") {
-          setApproval({ status: "approved", sessionId });
-          clearInterval(approvalPollRef.current!);
-          approvalPollRef.current = null;
-        } else if (status === "declined") {
-          setApproval({ status: "declined", sessionId });
-          clearInterval(approvalPollRef.current!);
-          approvalPollRef.current = null;
-        }
-      } catch { /* transient — keep polling */ }
-    };
-
-    approvalPollRef.current = setInterval(() => { void poll(); }, 2_000);
-    void poll(); // immediate first check
-  }, []);
-
-  // --------------------------------------------------------------------------
-  // Respond to approval request (approve / decline)
-  // --------------------------------------------------------------------------
-  const respondToApproval = useCallback(async (sessionId: string, approved: boolean) => {
-    try {
-      const laptopJwt = laptopJwtRef.current;
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (laptopJwt) {
-        headers["Authorization"] = `Bearer ${laptopJwt}`;
-      }
-      const resp = await fetch("/api/pairing/approval", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ action: "respond", sessionId, approved }),
-      });
-      if (resp.ok) {
-        setApproval({ status: approved ? "approved" : "declined", sessionId });
-        if (approvalPollRef.current) { clearInterval(approvalPollRef.current); approvalPollRef.current = null; }
-      }
-    } catch (err) {
-      console.error("Failed to respond to approval:", err);
-    }
-  }, []);
-
-  // --------------------------------------------------------------------------
-  // QR generation
-  // --------------------------------------------------------------------------
-  const generateQr = useCallback(async () => {
-    setQr({ phase: "loading" });
-    setTimeLeft(90);
-
-    try {
-      const QRCode = (await import("qrcode")).default;
-
-      // Step 1: Check if the agent has already registered a pairing QR.
-      const activeResp = await fetch("/api/pairing/active-qr", { cache: "no-store" });
-      if (activeResp.ok) {
-        const activeData = (await activeResp.json()) as
-          | { ok: true; data: { pairingUrl: string; expiresAt: number } }
-          | { ok: false };
-        if (activeData.ok && activeData.data.expiresAt > Date.now()) {
-          setAgentOnline(true);
-          const { pairingUrl, expiresAt } = activeData.data;
-
-          // Extract sessionId from the pairingUrl for approval polling
-          try {
-            const b64 = pairingUrl.split("/pair/")[1];
-            if (b64) {
-              const decoded = JSON.parse(Buffer.from(b64, "base64url").toString()) as { sessionId?: string };
-              if (decoded.sessionId) {
-                startApprovalPolling(decoded.sessionId);
-                // Fetch the laptop JWT so we can authenticate approval responses
-                void fetch(`/api/pairing/laptop-jwt?sessionId=${encodeURIComponent(decoded.sessionId)}`, { cache: "no-store" })
-                  .then(r => r.ok ? r.json() : null)
-                  .then(data => { if (data?.ok && data.data?.laptopJwt) laptopJwtRef.current = data.data.laptopJwt; })
-                  .catch(() => { /* non-fatal — will try on next QR refresh */ });
-              }
-            }
-          } catch { /* best-effort */ }
-
-          const qrDataUrl = await QRCode.toDataURL(pairingUrl, {
-            width: 300, margin: 2,
-            color: { dark: "#000000", light: "#ffffff" },
-            errorCorrectionLevel: "M",
-          });
-          const remaining = Math.ceil((expiresAt - Date.now()) / 1000);
-          setTimeLeft(remaining);
-          setQr({ phase: "ready", qrDataUrl, pairingUrl, expiresAt });
-          if (refreshRef.current) clearTimeout(refreshRef.current);
-          const msLeft = expiresAt - Date.now() - 5_000;
-          refreshRef.current = setTimeout(() => { void generateQr(); }, Math.max(msLeft, 2_000));
-          return;
-        }
-      }
-
-      // Step 2: Agent not running — generate a standalone QR (fallback mode)
-      setAgentOnline(false);
-      const backendOrigin = getBackendOrigin();
-      const qrOrigin = await getQrOrigin();
-      const laptopIdentity = generateX25519KeyPair();
-      const laptopEphemeral = generateX25519KeyPair();
-      const laptopPubKey = toBase64Url(laptopIdentity.publicKey);
-      const laptopEphemeralPubKey = toBase64Url(laptopEphemeral.publicKey);
-
-      const resp = await fetch(`${backendOrigin}/api/pairing/start`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ laptopPubKey, laptopEphemeralPubKey }),
-      });
-
-      if (!resp.ok) throw new Error(`Pairing start failed: HTTP ${resp.status}`);
-
-      const data = (await resp.json()) as { ok: boolean; data?: { sessionId: string; pairingToken: string; bearerToken: string } };
-      if (!data.ok || !data.data) throw new Error("Invalid response from pairing/start");
-
-      const { sessionId, pairingToken, bearerToken } = data.data;
-      // Store the laptop JWT so we can authenticate approval responses
-      if (bearerToken) laptopJwtRef.current = bearerToken;
-      startApprovalPolling(sessionId);
-
-      const qrPayload = JSON.stringify({ backendOrigin: qrOrigin, pairingToken, sessionId, laptopEphemeralPubKey });
-      const b64 = Buffer.from(qrPayload).toString("base64url");
-      const pairingUrl = `${qrOrigin}/pair/${b64}`;
-      const expiresAt = Date.now() + 90_000;
-
-      const qrDataUrl = await QRCode.toDataURL(pairingUrl, {
-        width: 300, margin: 2,
-        color: { dark: "#000000", light: "#ffffff" },
-        errorCorrectionLevel: "M",
-      });
-
-      setQr({ phase: "ready", qrDataUrl, pairingUrl, expiresAt });
-      if (refreshRef.current) clearTimeout(refreshRef.current);
-      refreshRef.current = setTimeout(() => { void generateQr(); }, 80_000);
-    } catch (err) {
-      setQr({ phase: "error", message: err instanceof Error ? err.message : "Unknown error" });
-    }
-  }, [startApprovalPolling]);
-
-  // Countdown timer
-  useEffect(() => {
-    if (qr.phase !== "ready") return;
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      const remaining = Math.max(0, Math.ceil(((qr as Extract<QrPhase, { phase: "ready" }>).expiresAt - Date.now()) / 1000));
-      setTimeLeft(remaining);
-    }, 500);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [qr]);
-
-  // Initial load
-  useEffect(() => {
-    void generateQr();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (refreshRef.current) clearTimeout(refreshRef.current);
-      if (approvalPollRef.current) clearInterval(approvalPollRef.current);
-    };
-  }, [generateQr]);
-
-  // Reset approval state when QR refreshes
-  const handleRefreshQr = () => {
-    setApproval({ status: "idle" });
-    if (approvalPollRef.current) { clearInterval(approvalPollRef.current); approvalPollRef.current = null; }
-    currentSessionIdRef.current = null;
-    void generateQr();
-  };
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
-  const showApprovalModal = approval.status === "pending";
-  const pendingSessionId = approval.status === "pending" ? approval.sessionId : null;
-
+function NavLink({ label, href }: { label: string; href: string }) {
+  const [h, setH] = useState(false);
   return (
-    <div style={s.root}>
-      {/* Approval modal */}
-      {showApprovalModal && pendingSessionId && (
-        <div style={s.overlay} role="dialog" aria-modal="true" aria-labelledby="approval-title">
-          <div style={s.modal}>
-            <div style={s.modalHeader}>
-              <span style={s.modalDot} />
-              <span style={s.modalLabel}>Incoming Connection</span>
-            </div>
-            <h2 id="approval-title" style={s.modalTitle}>
-              A device wants to control this laptop
-            </h2>
-            <p style={s.modalBody}>
-              Someone scanned your pairing QR. Approve only if you initiated this.
-            </p>
-            <div style={s.modalMeta}>
-              Session{" "}
-              <code style={s.monoChip}>
-                {pendingSessionId.slice(0, 8)}&hellip;{pendingSessionId.slice(-4)}
-              </code>
-            </div>
-            <div style={s.modalActions}>
-              <button
-                style={s.allowBtn}
-                onClick={() => { void respondToApproval(pendingSessionId, true); }}
-              >
-                Allow
-              </button>
-              <button
-                style={s.denyBtn}
-                onClick={() => { void respondToApproval(pendingSessionId, false); }}
-              >
-                Deny
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sidebar */}
-      <nav style={s.sidebar} aria-label="TetherDesk navigation">
-        <div style={s.sidebarTop}>
-          <div style={s.logo}>
-            <span style={s.logoMark}>TD</span>
-            <span style={s.logoText}>TetherDesk</span>
-          </div>
-          <div style={s.navSection}>
-            <div style={s.navLabel}>Connection</div>
-            <div style={{ ...s.navItem, ...s.navItemActive }}>
-              <span style={s.navIcon}>&#9675;</span>
-              Pair &amp; Control
-            </div>
-          </div>
-          <div style={s.navSection}>
-            <div style={s.navLabel}>System</div>
-            <div style={s.navItem}>
-              <span style={s.navIcon}>&#8962;</span>
-              Remote Desktop
-            </div>
-            <div style={s.navItem}>
-              <span style={s.navIcon}>&#10003;</span>
-              Auto-start
-              <span style={s.navChip}>on</span>
-            </div>
-            <div style={s.navItem}>
-              <span style={s.navIcon}>&#9748;</span>
-              Prevent Sleep
-            </div>
-          </div>
-        </div>
-        <div style={s.sidebarBottom}>
-          <div style={s.agentRow}>
-            <span
-              style={{
-                ...s.statusDot,
-                background: agentOnline ? "#4ade80" : "#f87171",
-              }}
-            />
-            <span style={s.agentText}>
-              {agentOnline ? "Agent running" : "Agent offline"}
-            </span>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main content */}
-      <main style={s.content} aria-label="Main content">
-        <header style={s.pageHeader}>
-          <div>
-            <h1 style={s.pageTitle}>Pair Devices</h1>
-            <p style={s.pageSubtitle}>
-              Scan the QR code or open the link on your phone
-            </p>
-          </div>
-          <div style={s.headerRight}>
-            <span
-              style={{
-                ...s.pill,
-                background: agentOnline ? "#052e16" : "#1a0a0a",
-                color: agentOnline ? "#4ade80" : "#f87171",
-                border: `1px solid ${agentOnline ? "#166534" : "#7f1d1d"}`,
-              }}
-            >
-              <span
-                style={{
-                  ...s.pillDot,
-                  background: agentOnline ? "#4ade80" : "#f87171",
-                }}
-              />
-              {agentOnline ? "Agent active" : "Agent offline"}
-            </span>
-          </div>
-        </header>
-
-        {approval.status === "approved" && (
-          <div
-            style={{
-              ...s.banner,
-              background: "#052e16",
-              border: "1px solid #166534",
-              color: "#4ade80",
-            }}
-            role="status"
-          >
-            &#10003; Connection approved &mdash; remote session is active
-          </div>
-        )}
-        {approval.status === "declined" && (
-          <div
-            style={{
-              ...s.banner,
-              background: "#1a0505",
-              border: "1px solid #7f1d1d",
-              color: "#f87171",
-            }}
-            role="status"
-          >
-            &times; Connection declined
-          </div>
-        )}
-
-        <div style={s.grid}>
-          {/* QR card */}
-          <div style={s.card}>
-            <div style={s.cardHeader}>
-              <span style={s.cardIcon}>&#9635;</span>
-              <div>
-                <div style={s.cardTitle}>QR Pairing Code</div>
-                <div style={s.cardSub}>
-                  Single use &middot;{" "}
-                  {qr.phase === "ready"
-                    ? `expires in ${timeLeft}s`
-                    : "loading…"}
-                </div>
-              </div>
-              {qr.phase === "ready" && (
-                <div
-                  style={{
-                    ...s.timerBadge,
-                    background: timeLeft > 20 ? "#052e16" : "#1a0a0a",
-                    color: timeLeft > 20 ? "#4ade80" : "#fbbf24",
-                    border: `1px solid ${timeLeft > 20 ? "#166534" : "#92400e"}`,
-                  }}
-                >
-                  {timeLeft}s
-                </div>
-              )}
-            </div>
-
-            <div style={s.qrArea}>
-              {qr.phase === "loading" && (
-                <div style={s.qrPlaceholder}>
-                  <div style={s.spinner} aria-hidden="true" />
-                  <p style={s.qrPlaceholderText}>Generating secure token&hellip;</p>
-                </div>
-              )}
-              {qr.phase === "ready" && (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- data URL, next/image provides no benefit */}
-                  <img
-                    src={qr.qrDataUrl}
-                    alt="Pairing QR Code — scan with your phone"
-                    style={s.qrImg}
-                  />
-                  <div style={s.timerTrack}>
-                    <div
-                      style={{
-                        ...s.timerFill,
-                        width: `${(timeLeft / 90) * 100}%`,
-                        background: timeLeft > 20 ? "#4ade80" : "#fbbf24",
-                      }}
-                    />
-                  </div>
-                </>
-              )}
-              {qr.phase === "error" && (
-                <div style={s.qrError}>
-                  <span style={{ fontSize: 24 }}>&#9888;</span>
-                  <span style={{ color: "#f87171", fontSize: 13 }}>
-                    {qr.message}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div style={s.cardActions}>
-              <button
-                style={
-                  qr.phase === "loading"
-                    ? { ...s.btnPrimary, opacity: 0.45, cursor: "not-allowed" }
-                    : s.btnPrimary
-                }
-                onClick={handleRefreshQr}
-                disabled={qr.phase === "loading"}
-              >
-                {qr.phase === "loading" ? "Generating…" : "New QR Code"}
-              </button>
-              {qr.phase === "ready" && (
-                <a
-                  href={qr.pairingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={s.btnSecondary}
-                >
-                  Open on Phone
-                </a>
-              )}
-            </div>
-          </div>
-
-          {/* Clients card */}
-          <div style={s.card}>
-            <div style={s.cardHeader}>
-              <span style={s.cardIcon}>&#9633;</span>
-              <div>
-                <div style={s.cardTitle}>Clients</div>
-                <div style={s.cardSub}>Paired &amp; waiting</div>
-              </div>
-              <span style={s.navChip}>
-                {approval.status === "approved" ? "1/1 online" : "0/1 online"}
-              </span>
-            </div>
-
-            <div style={s.clientList}>
-              {approval.status === "approved" && (
-                <div style={s.clientRow}>
-                  <div style={{ ...s.clientDot, background: "#4ade80" }} />
-                  <div style={s.clientInfo}>
-                    <div style={s.clientName}>Phone</div>
-                    <div style={s.clientMeta}>Approved just now</div>
-                  </div>
-                  <span
-                    style={{
-                      ...s.pill,
-                      background: "#052e16",
-                      color: "#4ade80",
-                      border: "1px solid #166534",
-                      fontSize: 11,
-                    }}
-                  >
-                    Active
-                  </span>
-                </div>
-              )}
-              {approval.status !== "approved" && (
-                <div style={s.emptyState}>
-                  <p style={s.emptyText}>No active clients</p>
-                  <p style={s.emptyHint}>Scan the QR code to connect your phone</p>
-                </div>
-              )}
-            </div>
-
-            <div style={s.settingRow}>
-              <div style={s.settingLeft}>
-                <div style={s.settingLabel}>
-                  &#9634; Auto-approve new devices
-                </div>
-                <div style={s.settingHint}>
-                  Require manual approval for new devices
-                </div>
-              </div>
-              <div
-                style={s.toggleOff}
-                role="switch"
-                aria-checked="false"
-                aria-label="Auto-approve"
-              />
-            </div>
-          </div>
-
-          {/* How to pair card */}
-          <div style={{ ...s.card, ...s.wideCard }}>
-            <div style={s.cardHeader}>
-              <span style={s.cardIcon}>&#8801;</span>
-              <div>
-                <div style={s.cardTitle}>How to pair</div>
-                <div style={s.cardSub}>Takes under 30 seconds</div>
-              </div>
-            </div>
-            <ol style={s.steps}>
-              <li style={s.step}>
-                <div style={s.stepNum}>1</div>
-                <div>
-                  <div style={s.stepTitle}>Start the agent on this laptop</div>
-                  <code style={s.codeChip}>
-                    pnpm --filter @tetherdesk/agent dev
-                  </code>
-                </div>
-              </li>
-              <li style={s.step}>
-                <div style={s.stepNum}>2</div>
-                <div>
-                  <div style={s.stepTitle}>Open your phone camera</div>
-                  <div style={s.stepHint}>Point at the QR code on the left</div>
-                </div>
-              </li>
-              <li style={s.step}>
-                <div style={s.stepNum}>3</div>
-                <div>
-                  <div style={s.stepTitle}>Tap Allow on this screen</div>
-                  <div style={s.stepHint}>
-                    An approval dialog will appear here
-                  </div>
-                </div>
-              </li>
-              <li style={s.step}>
-                <div style={s.stepNum}>4</div>
-                <div>
-                  <div style={s.stepTitle}>
-                    Your laptop screen appears on the phone
-                  </div>
-                  <div style={s.stepHint}>Full remote control is now active</div>
-                </div>
-              </li>
-            </ol>
-          </div>
-
-          {/* Activity log card */}
-          <div style={{ ...s.card, ...s.wideCard }}>
-            <div style={s.cardHeader}>
-              <span style={s.cardIcon}>&#9654;</span>
-              <div>
-                <div style={s.cardTitle}>Activity Log</div>
-                <div style={s.cardSub}>Real-time events from the agent</div>
-              </div>
-              {events.length > 0 && (
-                <button
-                  style={{ ...s.btnSecondary, fontSize: 11, padding: "2px 10px" }}
-                  onClick={() => setEvents([])}
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            <div style={s.logPanel}>
-              {events.length === 0 && (
-                <div style={s.logEmpty}>Waiting for agent events&hellip;</div>
-              )}
-              {events.map((evt) => (
-                <div key={evt.id} style={s.logRow}>
-                  <span style={{ ...s.logLevel, color: levelColor(evt.level) }}>
-                    {evt.level.toUpperCase()}
-                  </span>
-                  <span style={s.logStage}>{stageLabel(evt.stage)}</span>
-                  <span style={s.logMsg}>{evt.message}</span>
-                  <span style={s.logTime}>
-                    {new Date(evt.ts).toLocaleTimeString()}
-                  </span>
-                </div>
-              ))}
-              <div ref={logEndRef} />
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+    <a href={href}
+      style={{ color: h ? "#4ade80" : "#888", textDecoration: "none", cursor: "pointer", fontSize: 14, fontWeight: 500, transition: "color 0.15s" }}
+      onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}>
+      {label}
+    </a>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
+function Navbar() {
+  const [menu, setMenu] = useState(false);
+  const links = [
+    { label: "Features", href: "#features" },
+    { label: "How it Works", href: "#how-it-works" },
+    { label: "Docs", href: "https://github.com/wi5nuu/Tetherdesk#readme" },
+  ];
 
-const s: Record<string, React.CSSProperties> = {
-  root: {
-    display: "flex",
-    minHeight: "100vh",
-    backgroundColor: "#080808",
-    color: "#e0e0e0",
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
-    fontSize: 14,
-  },
-  sidebar: {
-    width: 220,
-    flexShrink: 0,
-    backgroundColor: "#0d0d0d",
-    borderRight: "1px solid #1a1a1a",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    padding: "20px 0",
-  },
-  sidebarTop: { display: "flex", flexDirection: "column", gap: 8 },
-  sidebarBottom: { padding: "0 16px" },
-  logo: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "0 16px 16px",
-    borderBottom: "1px solid #1a1a1a",
-    marginBottom: 8,
-  },
-  logoMark: {
-    width: 28,
-    height: 28,
-    backgroundColor: "#4ade80",
-    color: "#0a0a0a",
-    borderRadius: 6,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 11,
-    fontWeight: 800,
-    flexShrink: 0,
-  },
-  logoText: {
-    fontSize: 15,
-    fontWeight: 700,
-    color: "#f0f0f0",
-    letterSpacing: "-0.02em",
-  },
-  navSection: { padding: "8px 0" },
-  navLabel: {
-    padding: "4px 16px",
-    fontSize: 10,
-    fontWeight: 700,
-    color: "#444",
-    textTransform: "uppercase",
-    letterSpacing: "0.1em",
-  },
-  navItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "7px 16px",
-    color: "#666",
-    cursor: "pointer",
-    fontSize: 13,
-  },
-  navItemActive: {
-    backgroundColor: "#141414",
-    color: "#e0e0e0",
-    borderRight: "2px solid #4ade80",
-  },
-  navIcon: { fontSize: 12, width: 14, textAlign: "center", flexShrink: 0 },
-  navChip: {
-    marginLeft: "auto",
-    backgroundColor: "#1a1a1a",
-    border: "1px solid #2a2a2a",
-    borderRadius: 10,
-    padding: "1px 8px",
-    fontSize: 10,
-    color: "#666",
-  },
-  agentRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "10px 0",
-    borderTop: "1px solid #1a1a1a",
-  },
-  statusDot: { width: 7, height: 7, borderRadius: "50%", flexShrink: 0 },
-  agentText: { fontSize: 12, color: "#555" },
-  content: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    overflow: "auto",
-    padding: "28px 32px",
-    gap: 20,
-  },
-  pageHeader: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-  },
-  pageTitle: {
-    fontSize: 22,
-    fontWeight: 700,
-    color: "#f0f0f0",
-    margin: 0,
-    letterSpacing: "-0.03em",
-  },
-  pageSubtitle: { fontSize: 13, color: "#555", margin: "4px 0 0" },
-  headerRight: { display: "flex", alignItems: "center", gap: 8 },
-  pill: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 5,
-    borderRadius: 20,
-    padding: "4px 10px",
-    fontSize: 12,
-    fontWeight: 500,
-  },
-  pillDot: { width: 6, height: 6, borderRadius: "50%" },
-  banner: { borderRadius: 8, padding: "10px 14px", fontSize: 13, fontWeight: 500 },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: 16,
-  },
-  card: {
-    backgroundColor: "#0f0f0f",
-    border: "1px solid #1c1c1c",
-    borderRadius: 12,
-    padding: "18px 20px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 14,
-  },
-  wideCard: { gridColumn: "1 / -1" },
-  cardHeader: { display: "flex", alignItems: "center", gap: 10 },
-  cardIcon: { fontSize: 16, color: "#444", flexShrink: 0 },
-  cardTitle: { fontSize: 14, fontWeight: 600, color: "#e0e0e0", lineHeight: 1 },
-  cardSub: { fontSize: 11, color: "#444", marginTop: 3 },
-  qrArea: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 240,
-    overflow: "hidden",
-  },
-  qrPlaceholder: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 10,
-    padding: 32,
-  },
-  qrPlaceholderText: { fontSize: 12, color: "#999", margin: 0 },
-  qrImg: {
-    width: 220,
-    height: 220,
-    imageRendering: "pixelated",
-    display: "block",
-  },
-  qrError: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 8,
-    padding: 24,
-  },
-  timerBadge: {
-    marginLeft: "auto",
-    borderRadius: 20,
-    padding: "3px 10px",
-    fontSize: 12,
-    fontWeight: 600,
-    flexShrink: 0,
-  },
-  timerTrack: {
-    width: "85%",
-    height: 3,
-    backgroundColor: "#e0e0e0",
-    borderRadius: 2,
-    marginTop: 8,
-    overflow: "hidden",
-  },
-  timerFill: {
-    height: "100%",
-    borderRadius: 2,
-    transition: "width 0.8s linear, background 0.5s",
-  },
-  spinner: {
-    width: 28,
-    height: 28,
-    border: "2.5px solid #e0e0e0",
-    borderTopColor: "#4ade80",
-    borderRadius: "50%",
-    animation: "spin 0.7s linear infinite",
-  },
-  cardActions: { display: "flex", flexDirection: "column", gap: 7 },
-  btnPrimary: {
-    backgroundColor: "#4ade80",
-    color: "#0a0a0a",
-    border: "none",
-    borderRadius: 7,
-    padding: "9px 16px",
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: "pointer",
-    width: "100%",
-  },
-  btnSecondary: {
-    backgroundColor: "#141414",
-    color: "#c0c0c0",
-    border: "1px solid #242424",
-    borderRadius: 7,
-    padding: "9px 16px",
-    fontSize: 13,
-    cursor: "pointer",
-    width: "100%",
-    textDecoration: "none",
-    display: "block",
-    textAlign: "center",
-    boxSizing: "border-box",
-  },
-  clientList: { display: "flex", flexDirection: "column", gap: 8, flex: 1 },
-  clientRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "8px 10px",
-    backgroundColor: "#111",
-    border: "1px solid #1c1c1c",
-    borderRadius: 8,
-  },
-  clientDot: { width: 8, height: 8, borderRadius: "50%", flexShrink: 0 },
-  clientInfo: { flex: 1 },
-  clientName: { fontSize: 13, fontWeight: 500, color: "#e0e0e0" },
-  clientMeta: { fontSize: 11, color: "#444" },
-  emptyState: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    padding: "20px 0",
-  },
-  emptyText: { fontSize: 13, color: "#444", margin: 0, fontWeight: 500 },
-  emptyHint: { fontSize: 11, color: "#333", margin: 0 },
-  settingRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 10,
-    borderTop: "1px solid #161616",
-  },
-  settingLeft: { flex: 1 },
-  settingLabel: { fontSize: 12, color: "#666", fontWeight: 500 },
-  settingHint: { fontSize: 11, color: "#333", marginTop: 2 },
-  toggleOff: {
-    width: 32,
-    height: 18,
-    backgroundColor: "#222",
-    border: "1px solid #333",
-    borderRadius: 9,
-    cursor: "pointer",
-    flexShrink: 0,
-  },
-  steps: {
-    listStyle: "none",
-    padding: 0,
-    margin: 0,
-    display: "flex",
-    gap: 0,
-  },
-  step: {
-    flex: 1,
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 10,
-    padding: "0 12px 0 0",
-  },
-  stepNum: {
-    width: 22,
-    height: 22,
-    borderRadius: "50%",
-    backgroundColor: "#1a1a1a",
-    border: "1px solid #2a2a2a",
-    color: "#555",
-    fontSize: 11,
-    fontWeight: 700,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  stepTitle: { fontSize: 13, fontWeight: 600, color: "#c0c0c0", marginBottom: 3 },
-  stepHint: { fontSize: 11, color: "#444", lineHeight: 1.5 },
-  codeChip: {
-    display: "inline-block",
-    backgroundColor: "#141414",
-    border: "1px solid #242424",
-    color: "#4ade80",
-    borderRadius: 5,
-    padding: "2px 8px",
-    fontFamily: "monospace",
-    fontSize: 11,
-    marginTop: 4,
-  },
-  monoChip: {
-    backgroundColor: "#141414",
-    border: "1px solid #242424",
-    color: "#a0a0a0",
-    borderRadius: 4,
-    padding: "1px 6px",
-    fontFamily: "monospace",
-    fontSize: 12,
-  },
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 200,
-    padding: 16,
-  },
-  modal: {
-    backgroundColor: "#111",
-    border: "1px solid #252525",
-    borderRadius: 14,
-    padding: "24px 24px 22px",
-    width: "100%",
-    maxWidth: 380,
-    boxShadow: "0 32px 64px rgba(0,0,0,0.9)",
-  },
-  modalHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: 7,
-    marginBottom: 14,
-  },
-  modalDot: {
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    backgroundColor: "#fbbf24",
-    flexShrink: 0,
-  },
-  modalLabel: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: "#777",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: 700,
-    color: "#f0f0f0",
-    margin: "0 0 8px",
-    lineHeight: 1.3,
-  },
-  modalBody: {
-    fontSize: 13,
-    color: "#777",
-    margin: "0 0 14px",
-    lineHeight: 1.6,
-  },
-  modalMeta: { fontSize: 12, color: "#444", marginBottom: 18 },
-  modalActions: { display: "flex", gap: 8 },
-  allowBtn: {
-    flex: 1,
-    backgroundColor: "#4ade80",
-    color: "#0a0a0a",
-    border: "none",
-    borderRadius: 8,
-    padding: "11px 0",
-    fontSize: 14,
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-  denyBtn: {
-    flex: 1,
-    backgroundColor: "#141414",
-    color: "#f87171",
-    border: "1px solid #2a1212",
-    borderRadius: 8,
-    padding: "11px 0",
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  logPanel: {
-    maxHeight: 220,
-    overflowY: "auto",
-    fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
-    fontSize: 12,
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-    padding: "4px 0",
-  },
-  logEmpty: {
-    color: "#444",
-    fontSize: 12,
-    padding: "12px 0",
-    textAlign: "center",
-  },
-  logRow: {
-    display: "flex",
-    gap: 8,
-    alignItems: "baseline",
-    padding: "3px 2px",
-    borderRadius: 4,
-    borderBottom: "1px solid #111",
-  },
-  logLevel: {
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: "0.05em",
-    width: 48,
-    flexShrink: 0,
-  },
-  logStage: {
-    color: "#555",
-    fontSize: 11,
-    width: 90,
-    flexShrink: 0,
-  },
-  logMsg: {
-    color: "#c0c0c0",
-    flex: 1,
-    wordBreak: "break-word",
-  },
-  logTime: {
-    color: "#333",
-    fontSize: 10,
-    flexShrink: 0,
-  },
-};
+  return (
+    <nav style={{
+      position: "sticky", top: 0, zIndex: 100,
+      background: "rgba(10,10,10,0.85)", backdropFilter: "blur(12px)",
+      borderBottom: "1px solid #141414",
+    }}>
+      <div style={{ ...t.wrap, display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontWeight: 700, fontSize: 18, color: "#4ade80" }}>TetherDesk</span>
+          <span style={{ fontSize: 11, color: "#555", padding: "2px 6px", border: "1px solid #222", borderRadius: 4 }}>v{APP_VERSION}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          <div style={{ display: "none", gap: 24, alignItems: "center" }} className="landing-nav-desktop">
+            {links.map((l) => <NavLink key={l.label} label={l.label} href={l.href} />)}
+          </div>
+          <Link href="/access" style={{ ...t.btn, ...t.btnPrimary, fontSize: 13, padding: "8px 18px" }}>Get Started</Link>
+          <button onClick={() => setMenu(!menu)} style={{ background: "none", border: "none", color: "#888", fontSize: 22, cursor: "pointer", display: "none" }} className="landing-menu-btn">
+            {menu ? "✕" : "☰"}
+          </button>
+        </div>
+      </div>
+      {menu && (
+        <div style={{ borderTop: "1px solid #141414", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+          {links.map((l) => (
+            <a key={l.label} href={l.href} style={{ color: "#888", textDecoration: "none", cursor: "pointer", fontSize: 15 }}
+              onClick={() => setMenu(false)}>{l.label}</a>
+          ))}
+        </div>
+      )}
+    </nav>
+  );
+}
 
+function Hero() {
+  return (
+    <section style={{
+      ...t.section, paddingTop: 100, paddingBottom: 60,
+      textAlign: "center" as const, position: "relative" as const, overflow: "hidden" as const,
+    }}>
+      <div style={{
+        position: "absolute", top: "50%", left: "50%", translate: "-50% -50%",
+        width: "80vw", height: "80vw", maxWidth: 700, maxHeight: 700,
+        background: "radial-gradient(circle, rgba(74,222,128,0.06) 0%, transparent 70%)",
+        pointerEvents: "none",
+      }} />
+      <div style={{ ...t.wrap, position: "relative" as const }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#111", border: "1px solid #1f1f1f", borderRadius: 20, padding: "4px 14px 4px 4px", marginBottom: 32, fontSize: 12 }}>
+          <span style={{ background: "#4ade80", color: "#0a0a0a", borderRadius: 20, padding: "2px 10px", fontWeight: 600 }}>NEW</span>
+          <span style={{ color: "#888" }}>Now Available</span>
+        </div>
+        <h1 style={{ fontSize: "clamp(36px, 8vw, 64px)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", marginBottom: 20 }}>
+          <div>Code from bed.</div>
+          <div>Fix bugs at the cafe.</div>
+          <div>Deploy from anywhere.</div>
+        </h1>
+        <p style={{ ...t.p, margin: "0 auto 40px", fontSize: "clamp(15px, 2.5vw, 18px)", maxWidth: 520 }}>
+          Your terminal. Your phone. Zero config. Claude Code in your pocket.
+        </p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
+          <Link href="/access" style={{ ...t.btn, ...t.btnPrimary, fontSize: 16, padding: "14px 36px" }}>Get Remote</Link>
+          <Link href="/dashboard" style={{ ...t.btn, ...t.btnOutline, fontSize: 16, padding: "14px 36px" }}>Dashboard</Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TerminalDemo() {
+  const lines = [
+    { text: "$ npm install -g tetherdesk", dim: true },
+    { text: "", dim: false },
+    { text: "$ tetherdesk start", dim: true },
+    { text: "→ Starting server...", dim: false },
+    { text: "→ Creating tunnel...", dim: false },
+    { text: "✓ Server running on http://localhost:3000", dim: false },
+    { text: "✓ Tunnel ready: https://xxx.trycloudflare.com", dim: false },
+    { text: "", dim: false },
+    { text: "  Ready in 30 seconds", dim: false, prompt: false },
+  ];
+
+  return (
+    <section style={{ ...t.section, paddingTop: 0 }}>
+      <div style={{ ...t.wrap, maxWidth: 640 }}>
+        <div className="landing-terminal">
+          <div className="landing-terminal-bar">
+            <div className="landing-terminal-dot" style={{ background: "#f87171" }} />
+            <div className="landing-terminal-dot" style={{ background: "#fbbf24" }} />
+            <div className="landing-terminal-dot" style={{ background: "#4ade80" }} />
+            <span style={{ color: "#555", fontSize: 12, marginLeft: 8 }}>terminal — tetherdesk</span>
+          </div>
+          <div style={{ padding: "16px 20px", ...t.mono, fontSize: 13, lineHeight: 1.7 }}>
+            {lines.map((l, i) => (
+              <div key={i} style={{ color: l.dim !== false ? "#888" : "#ccc", whiteSpace: "pre-wrap" }}>
+                {l.text}
+              </div>
+            ))}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+              {[
+                { label: "100% Secure", color: "#4ade80" },
+                { label: "<50ms Latency", color: "#4ade80" },
+                { label: "24/7 Available", color: "#4ade80" },
+              ].map((s) => (
+                <span key={s.label} style={{ fontSize: 12, color: s.color, border: "1px solid #1f1f1f", borderRadius: 20, padding: "2px 10px" }}>
+                  ✓ {s.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function WhyChoose() {
+  const features = [
+    "Zero Config", "Terminal Access", "Remote Desktop", "File Explorer",
+    "Code Editor", "Git Integration", "Mobile Optimized", "Browser-Based",
+    "QR Login", "Auto Tunnel", "Persistent Sessions", "Multi-Device Sync",
+    "Push Notifications", "AI Integration", "No Port Forwarding", "No Account Required",
+  ];
+
+  const competitors: Array<{ name: string; present: boolean[] }> = [
+    { name: "TetherDesk", present: features.map(() => true) },
+    { name: "Claude Remote", present: [true, true, false, false, false, false, false, true, false, true, false, false, false, true, false, true] },
+    { name: "TeamViewer", present: [false, false, true, true, false, false, false, false, false, false, false, true, false, false, false, true] },
+    { name: "Chrome Remote", present: [false, false, true, false, false, false, false, true, false, false, false, false, false, false, false, false] },
+    { name: "Termius", present: [false, true, false, false, false, false, true, false, false, false, false, true, false, false, false, true] },
+  ];
+
+  return (
+    <section id="features" style={t.sectionAlt}>
+      <div style={t.wrap}>
+        <h2 style={{ ...t.h2, ...t.center }}>Why Choose TetherDesk?</h2>
+        <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>Compare features with other remote access solutions</p>
+        <div className="landing-table-wrapper">
+          <table className="landing-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                {competitors.map((c) => <th key={c.name}>{c.name}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {features.map((f, i) => (
+                <tr key={f}>
+                  <td style={{ color: "#e0e0e0", fontWeight: 500 }}>{f}</td>
+                  {competitors.map((c) => (
+                    <td key={c.name}>
+                      <span className={c.present[i] ? "landing-check" : "landing-cross"}>
+                        {c.present[i] ? "✓" : "—"}
+                      </span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p style={{ ...t.center, fontSize: 13, color: "#4ade80", marginTop: 16, fontWeight: 500 }}>
+          TetherDesk: All-in-one · {features.length}/{features.length} features
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function Features() {
+  const items = [
+    { title: "Code from bed", desc: "Terminal on phone", icon: "🖥" },
+    { title: "Deploy at cafe", desc: "No heavy laptop needed", icon: "☕" },
+    { title: "Fix bugs anywhere", desc: "Access from everywhere", icon: "🔧" },
+    { title: "Secure & fast", desc: "Auto tunnel, <50ms", icon: "🔒" },
+    { title: "Simple & powerful", desc: "Just scan QR", icon: "📱" },
+    { title: "Light & smooth", desc: "No lag, no freeze", icon: "⚡" },
+  ];
+
+  return (
+    <section style={t.sectionAlt}>
+      <div style={t.wrap}>
+        <h2 style={{ ...t.h2, ...t.center }}>Powerful Features</h2>
+        <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>Everything you need for secure remote access</p>
+        <div style={t.grid3}>
+          {items.map((item) => (
+            <div key={item.title} className="landing-card" style={{ padding: 28 }}>
+              <div style={{ fontSize: 28, marginBottom: 12 }}>{item.icon}</div>
+              <h3 style={t.h3}>{item.title}</h3>
+              <p style={{ ...t.p, fontSize: 14 }}>{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HowItWorks() {
+  const steps = [
+    { num: "01", title: "Run on your computer", desc: "Install TetherDesk and start the agent. It creates a secure tunnel instantly." },
+    { num: "02", title: "Scan QR or enter key", desc: "Scan the QR code with your phone, or enter the access key shown in your terminal." },
+    { num: "03", title: "Prompt from anywhere", desc: "Type on your phone, code runs on your computer. Real-time, zero lag." },
+  ];
+
+  return (
+    <section id="how-it-works" style={t.sectionAlt}>
+      <div style={t.wrap}>
+        <h2 style={{ ...t.h2, ...t.center }}>How It Works</h2>
+        <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>Get connected in three simple steps</p>
+        <div style={t.grid3}>
+          {steps.map((s) => (
+            <div key={s.num} style={{ textAlign: "center", padding: 32 }}>
+              <div style={{ fontSize: 48, fontWeight: 800, color: "#4ade80", opacity: 0.2, marginBottom: 16 }}>{s.num}</div>
+              <h3 style={t.h3}>{s.title}</h3>
+              <p style={{ ...t.p, fontSize: 14, margin: "10px auto 0" }}>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CliDemo() {
+  const output = [
+    "$ npm install -g tetherdesk",
+    "→ Installing tetherdesk...",
+    "✓ Installation complete",
+    "",
+    "$ tetherdesk start",
+    "→ Starting server...",
+    "→ Creating tunnel...",
+    "✓ Server running on http://localhost:3000",
+    "✓ Tunnel ready: https://xxx.trycloudflare.com",
+    "",
+    "  Scan QR code to connect — 30s setup",
+  ];
+
+  return (
+    <section style={{ ...t.section, padding: "60px 0", background: "#080808" }}>
+      <div style={t.wrap}>
+        <h2 style={{ ...t.h2, ...t.center }}>Get Started in Seconds</h2>
+        <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>Install TetherDesk and start accessing your terminal remotely</p>
+        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+          <div className="landing-terminal">
+            <div className="landing-terminal-bar">
+              <div className="landing-terminal-dot" style={{ background: "#f87171" }} />
+              <div className="landing-terminal-dot" style={{ background: "#fbbf24" }} />
+              <div className="landing-terminal-dot" style={{ background: "#4ade80" }} />
+              <span style={{ color: "#555", fontSize: 12, marginLeft: 8 }}>terminal</span>
+            </div>
+            <div style={{ padding: "16px 20px", ...t.mono, fontSize: 13, lineHeight: 1.7 }}>
+              {output.map((l, i) => (
+                <div key={i} style={{ color: l.startsWith("$") ? "#888" : l.startsWith("✓") ? "#4ade80" : l.startsWith("→") ? "#888" : "#ccc", whiteSpace: "pre-wrap" }}>
+                  {l}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 32, flexWrap: "wrap" }}>
+            {["30s Setup", "0 Configuration", "∞ Possibilities"].map((s) => (
+              <span key={s} style={{ fontSize: 13, color: "#4ade80" }}>{s}</span>
+            ))}
+          </div>
+          <p style={{ ...t.center, fontSize: 13, color: "#555", marginTop: 24 }}>
+            Free. Open source. Ready in 30 seconds.
+          </p>
+          <div style={{ ...t.flexCenter, gap: 12, marginTop: 24, flexWrap: "wrap" }}>
+            <Link href="/access" style={{ ...t.btn, ...t.btnPrimary }}>Get Remote</Link>
+            <a href="https://github.com/wi5nuu/Tetherdesk" style={{ ...t.btn, ...t.btnOutline }} target="_blank" rel="noopener noreferrer">GitHub</a>
+          </div>
+          <p style={{ ...t.center, fontSize: 12, color: "#555", marginTop: 16 }}>No credit card required · Open source · MIT License</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  const fl = (color = "#666") => ({ color, textDecoration: "none", cursor: "pointer", fontSize: 13, lineHeight: 2 });
+
+  return (
+    <footer style={{ borderTop: "1px solid #141414", padding: "48px 0 32px" }}>
+      <div style={t.wrap}>
+        <div style={t.grid2}>
+          <div>
+            <span style={{ fontWeight: 700, fontSize: 16, color: "#4ade80" }}>TetherDesk</span>
+            <p style={{ ...t.p, fontSize: 13, marginTop: 8 }}>Secure remote terminal and desktop access. Connect to your machines from anywhere in the world.</p>
+            <p style={{ fontSize: 12, color: "#555", marginTop: 16 }}>© 2026 TetherDesk. All rights reserved.</p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
+            <div>
+              <p style={{ fontSize: 12, color: "#888", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Product</p>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <Link href="/access" style={fl()}>Remote</Link>
+                <Link href="/access" style={fl()}>Terminal</Link>
+                <Link href="/dashboard" style={fl()}>Remote Desktop</Link>
+              </div>
+            </div>
+            <div>
+              <p style={{ fontSize: 12, color: "#888", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Resources</p>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <a href="https://github.com/wi5nuu/Tetherdesk" style={fl()} target="_blank" rel="noopener noreferrer">GitHub</a>
+                <a href="https://github.com/wi5nuu/Tetherdesk#readme" style={fl()} target="_blank" rel="noopener noreferrer">Documentation</a>
+                <a href="https://github.com/wi5nuu/Tetherdesk/discussions" style={fl()} target="_blank" rel="noopener noreferrer">Community</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 32, paddingTop: 24, borderTop: "1px solid #141414", flexWrap: "wrap", fontSize: 12, color: "#444" }}>
+          <span>Built with Next.js, WebRTC, and Cloudflare</span>
+          <div style={{ display: "flex", gap: 16, marginLeft: "auto" }}>
+            <a href="https://github.com/wi5nuu/Tetherdesk" style={fl("#555")} target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://github.com/wi5nuu/Tetherdesk#readme" style={fl("#555")} target="_blank" rel="noopener noreferrer">Docs</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
+
+export default function LandingPage() {
+  return (
+    <div style={t.page}>
+      <Navbar />
+      <Hero />
+      <TerminalDemo />
+      <WhyChoose />
+      <Features />
+      <HowItWorks />
+      <CliDemo />
+      <Footer />
+    </div>
+  );
+}
