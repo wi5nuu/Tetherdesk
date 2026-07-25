@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Turborepo cache
+.turbo/
+
+# Environment files - NEVER COMMIT THESE
+.env
+.env.local
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel deployment config - contains project IDs
+.vercel/
+.vercel
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+coverage/
+.nyc_output/
+
+# Agent runtime files
+~/.tetherdesk/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Internal development docs - NOT FOR PUBLIC
+AGENTS.md
+agents.md
+AUDIT.md
+TODO.md
+todo.md
+
+# Cloudflared binary
+cloudflared.exe
+cloudflared
+

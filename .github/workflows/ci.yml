@@ -1,0 +1,159 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Lint · Typecheck · Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["20.x"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (all packages)
+        run: pnpm turbo run typecheck
+
+      - name: Lint (all packages)
+        run: pnpm turbo run lint
+        continue-on-error: true  # lint warnings should not block CI until lint config is fully stabilized
+
+      - name: Unit tests (all packages)
+        run: pnpm turbo run test
+        env:
+          # Use a namespaced test key prefix so CI runs never touch production Redis keys.
+          # Real integration tests (below) get their own namespaced Upstash instance.
+          TETHERDESK_KEY_NAMESPACE: ci-test
+
+      - name: Upload coverage (protocol + crypto)
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unit
+          fail_ci_if_error: false
+
+  # ---------------------------------------------------------------------------
+  # Integration tests — require real Upstash credentials in repo secrets.
+  # Skipped on forks (no access to secrets) and dependabot PRs.
+  # ---------------------------------------------------------------------------
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    needs: ci
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' && !github.event.pull_request.head.repo.fork)
+    env:
+      UPSTASH_REDIS_REST_URL: ${{ secrets.TEST_UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.TEST_UPSTASH_REDIS_REST_TOKEN }}
+      JWT_SIGNING_SECRET: ${{ secrets.TEST_JWT_SIGNING_SECRET }}
+      TETHERDESK_KEY_NAMESPACE: ci-integration
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm turbo run build --filter=@tetherdesk/protocol --filter=@tetherdesk/crypto
+
+      - name: Run integration tests
+        run: pnpm --filter @tetherdesk/web test:integration
+
+  # ---------------------------------------------------------------------------
+  # Cross-platform agent smoke tests (capture/input stubs, not real OS APIs)
+  # ---------------------------------------------------------------------------
+  agent-cross-platform:
+    name: Agent smoke — ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: ci
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test agent
+        run: pnpm --filter @tetherdesk/agent test
+
+  # ---------------------------------------------------------------------------
+  # Dependency vulnerability audit (Section 15.12)
+  # ---------------------------------------------------------------------------
+  audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit (high + critical only)
+        run: pnpm audit --audit-level=high

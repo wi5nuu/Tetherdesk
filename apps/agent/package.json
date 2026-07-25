@@ -1,0 +1,44 @@
+{
+  "name": "@tetherdesk/agent",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/main.js",
+  "bin": {
+    "tetherdesk-agent": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/main.ts start",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@jitsi/robotjs": "0.6.24",
+    "@tetherdesk/crypto": "workspace:*",
+    "@tetherdesk/protocol": "workspace:*",
+    "commander": "^12.1.0",
+    "jpeg-js": "0.4.4",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "screenshot-desktop": "1.15.4",
+    "ws": "^8.18.0"
+  },
+  "optionalDependencies": {
+    "@roamhq/wrtc": "^0.10.0"
+  },
+  "devDependencies": {
+    "@tetherdesk/config": "workspace:*",
+    "@types/jpeg-js": "^0.3.7",
+    "@types/node": "^22.10.2",
+    "@types/qrcode": "^1.5.5",
+    "@types/ws": "^8.5.13",
+    "@vitest/coverage-v8": "^2.1.8",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
