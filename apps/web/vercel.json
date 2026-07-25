@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd ../.. && pnpm install && pnpm --filter @tetherdesk/web build",
-  "installCommand": "pnpm install",
   "framework": "nextjs",
+  "buildCommand": "cd .. && pnpm install && pnpm --filter @tetherdesk/crypto build && pnpm --filter @tetherdesk/protocol build && pnpm --filter @tetherdesk/web build",
+  "installCommand": "cd .. && pnpm install",
   "headers": [
     {
       "source": "/api/(.*)",
