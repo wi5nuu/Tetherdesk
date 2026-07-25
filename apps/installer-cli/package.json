@@ -1,22 +1,41 @@
 {
   "name": "tetherdesk",
-  "version": "0.1.0",
-  "description": "Zero-infrastructure remote laptop control — installer and management CLI",
-  "license": "UNLICENSED",
+  "version": "2.1.21",
+  "description": "Zero-infrastructure remote laptop control — scan QR, control your laptop from your phone",
+  "license": "MIT",
   "type": "module",
   "bin": {
-    "tetherdesk": "./dist/index.js"
+    "tetherdesk": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "remote-desktop",
+    "webrtc",
+    "self-hosted",
+    "remote-control",
+    "qr-pairing",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wi5nuu/Tetherdesk.git"
+  },
+  "homepage": "https://github.com/wi5nuu/Tetherdesk#readme",
+  "engines": {
+    "node": ">=20.0.0"
   },
   "scripts": {
     "build": "tsup --config tsup.config.ts",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@tetherdesk/crypto": "workspace:*",
-    "@tetherdesk/protocol": "workspace:*",
     "commander": "^12.1.0",
     "ora": "^8.1.1",
     "picocolors": "^1.1.1",
@@ -24,6 +43,8 @@
   },
   "devDependencies": {
     "@tetherdesk/config": "workspace:*",
+    "@tetherdesk/crypto": "workspace:*",
+    "@tetherdesk/protocol": "workspace:*",
     "@types/node": "^22.10.2",
     "tsup": "^8.4.0",
     "tsx": "^4.19.2",
