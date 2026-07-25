@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { generateX25519KeyPair, toBase64Url } from "@tetherdesk/crypto";
+import { useToast } from "../../lib/toast";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,6 +31,16 @@ type ActivityEvent = {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function base64UrlEncode(str: string): string {
+  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function base64UrlDecode(str: string): string {
+  let s = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (s.length % 4) s += "=";
+  return atob(s);
+}
 
 function getBackendOrigin(): string {
   if (typeof window === "undefined") return "";
@@ -66,6 +77,7 @@ function levelColor(level: ActivityEvent["level"]): string {
 // ---------------------------------------------------------------------------
 
 export default function HomePage() {
+  const { addToast } = useToast();
   const [qr, setQr] = useState<QrPhase>({ phase: "loading" });
   const [timeLeft, setTimeLeft] = useState(90);
   const [approval, setApproval] = useState<ApprovalPhase>({ status: "idle" });
@@ -89,6 +101,8 @@ export default function HomePage() {
   // --------------------------------------------------------------------------
   useEffect(() => {
     const es = new EventSource("/api/events");
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
     es.onmessage = (e: MessageEvent) => {
       try {
         const evt = JSON.parse(e.data as string) as ActivityEvent;
@@ -98,7 +112,20 @@ export default function HomePage() {
         });
       } catch { /* ignore malformed */ }
     };
-    return () => es.close();
+
+    es.onerror = () => {
+      es.close();
+      reconnectTimer = setTimeout(() => {
+        const newEs = new EventSource("/api/events");
+        newEs.onmessage = es.onmessage;
+        newEs.onerror = es.onerror;
+      }, 3000);
+    };
+
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      es.close();
+    };
   }, []);
 
   // Auto-scroll log to bottom
@@ -163,12 +190,14 @@ export default function HomePage() {
       });
       if (resp.ok) {
         setApproval({ status: approved ? "approved" : "declined", sessionId });
+        addToast(approved ? "success" : "info", approved ? "Connection approved" : "Connection declined");
         if (approvalPollRef.current) { clearInterval(approvalPollRef.current); approvalPollRef.current = null; }
       }
     } catch (err) {
+      addToast("error", "Failed to respond to approval request");
       console.error("Failed to respond to approval:", err);
     }
-  }, []);
+  }, [addToast]);
 
   // --------------------------------------------------------------------------
   // QR generation
@@ -194,11 +223,13 @@ export default function HomePage() {
           try {
             const b64 = pairingUrl.split("/pair/")[1];
             if (b64) {
-              const decoded = JSON.parse(Buffer.from(b64, "base64url").toString()) as { sessionId?: string };
+              const decoded = JSON.parse(base64UrlDecode(b64)) as { sessionId?: string; pairingToken?: string };
               if (decoded.sessionId) {
                 startApprovalPolling(decoded.sessionId);
                 // Fetch the laptop JWT so we can authenticate approval responses
-                void fetch(`/api/pairing/laptop-jwt?sessionId=${encodeURIComponent(decoded.sessionId)}`, { cache: "no-store" })
+                const params = new URLSearchParams({ sessionId: decoded.sessionId });
+                if (decoded.pairingToken) params.set("pairingToken", decoded.pairingToken);
+                void fetch(`/api/pairing/laptop-jwt?${params}`, { cache: "no-store" })
                   .then(r => r.ok ? r.json() : null)
                   .then(data => { if (data?.ok && data.data?.laptopJwt) laptopJwtRef.current = data.data.laptopJwt; })
                   .catch(() => { /* non-fatal — will try on next QR refresh */ });
@@ -214,6 +245,7 @@ export default function HomePage() {
           const remaining = Math.ceil((expiresAt - Date.now()) / 1000);
           setTimeLeft(remaining);
           setQr({ phase: "ready", qrDataUrl, pairingUrl, expiresAt });
+          addToast("success", "QR code generated — scan with your phone");
           if (refreshRef.current) clearTimeout(refreshRef.current);
           const msLeft = expiresAt - Date.now() - 5_000;
           refreshRef.current = setTimeout(() => { void generateQr(); }, Math.max(msLeft, 2_000));
@@ -247,7 +279,7 @@ export default function HomePage() {
       startApprovalPolling(sessionId);
 
       const qrPayload = JSON.stringify({ backendOrigin: qrOrigin, pairingToken, sessionId, laptopEphemeralPubKey });
-      const b64 = Buffer.from(qrPayload).toString("base64url");
+      const b64 = base64UrlEncode(qrPayload);
       const pairingUrl = `${qrOrigin}/pair/${b64}`;
       const expiresAt = Date.now() + 90_000;
 
@@ -258,12 +290,15 @@ export default function HomePage() {
       });
 
       setQr({ phase: "ready", qrDataUrl, pairingUrl, expiresAt });
+      addToast("success", "QR code ready — scan with your phone");
       if (refreshRef.current) clearTimeout(refreshRef.current);
       refreshRef.current = setTimeout(() => { void generateQr(); }, 80_000);
     } catch (err) {
-      setQr({ phase: "error", message: err instanceof Error ? err.message : "Unknown error" });
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setQr({ phase: "error", message: msg });
+      addToast("error", `QR generation failed: ${msg}`);
     }
-  }, [startApprovalPolling]);
+  }, [startApprovalPolling, addToast]);
 
   // --------------------------------------------------------------------------
   // API key generation
@@ -273,22 +308,28 @@ export default function HomePage() {
     setApiKey(null);
     try {
       const sid = currentSessionIdRef.current;
+      const laptopJwt = laptopJwtRef.current;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (laptopJwt) headers["Authorization"] = `Bearer ${laptopJwt}`;
       const resp = await fetch("/api/access/keys", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(sid ? { sessionId: sid } : {}),
       });
       const data = (await resp.json()) as { ok: boolean; data?: { apiKey: string }; error?: { message: string } };
       if (data.ok && data.data) {
         setApiKey(data.data.apiKey);
         setApiKeyCopied(false);
+        addToast("success", "New API key generated — copy it now, it won't be shown again");
       } else {
         setApiKeyError(data.error?.message ?? "Failed to generate key");
+        addToast("error", data.error?.message ?? "Failed to generate key");
       }
     } catch {
       setApiKeyError("Network error — could not reach server");
+      addToast("error", "Network error — could not reach server");
     }
-  }, []);
+  }, [addToast]);
 
   // Countdown timer
   useEffect(() => {
@@ -330,18 +371,28 @@ export default function HomePage() {
     <div style={s.root}>
       {/* Approval modal */}
       {showApprovalModal && pendingSessionId && (
-        <div style={s.overlay} role="dialog" aria-modal="true" aria-labelledby="approval-title">
-          <div style={s.modal}>
-            <div style={s.modalHeader}>
-              <span style={s.modalDot} />
-              <span style={s.modalLabel}>Incoming Connection</span>
-            </div>
-            <h2 id="approval-title" style={s.modalTitle}>
-              A device wants to control this laptop
-            </h2>
-            <p style={s.modalBody}>
-              Someone scanned your pairing QR. Approve only if you initiated this.
-            </p>
+          <div
+            style={s.overlay}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="approval-title"
+            aria-describedby="approval-desc"
+            onClick={(e) => { if (e.target === e.currentTarget) setApproval({ status: "idle" }); }}
+            onKeyDown={(e) => { if (e.key === "Escape") setApproval({ status: "idle" }); }}
+            tabIndex={-1}
+            ref={(el) => { el?.focus(); }}
+          >
+            <div style={s.modal}>
+              <div style={s.modalHeader}>
+                <span style={s.modalDot} />
+                <span style={s.modalLabel}>Incoming Connection</span>
+              </div>
+              <h2 id="approval-title" style={s.modalTitle}>
+                A device wants to control this laptop
+              </h2>
+              <p id="approval-desc" style={s.modalBody}>
+                Someone scanned your pairing QR. Approve only if you initiated this.
+              </p>
             <div style={s.modalMeta}>
               Session{" "}
               <code style={s.monoChip}>
@@ -350,12 +401,14 @@ export default function HomePage() {
             </div>
             <div style={s.modalActions}>
               <button
+                className="btn-allow"
                 style={s.allowBtn}
                 onClick={() => { void respondToApproval(pendingSessionId, true); }}
               >
                 Allow
               </button>
               <button
+                className="btn-deny"
                 style={s.denyBtn}
                 onClick={() => { void respondToApproval(pendingSessionId, false); }}
               >
@@ -390,29 +443,30 @@ export default function HomePage() {
             <span style={s.logoMark}>TD</span>
             <span style={s.logoText}>TetherDesk</span>
           </div>
-          <div style={s.navSection}>
-            <div style={s.navLabel}>Connection</div>
-            <div style={{ ...s.navItem, ...s.navItemActive }}>
-              <span style={s.navIcon} aria-hidden="true">&#9675;</span>
-              Pair &amp; Control
+            <div style={s.navSection}>
+              <div style={s.navLabel}>Connection</div>
+              <div className="nav-item-hover" style={{ ...s.navItem, ...s.navItemActive }}>
+                <span style={s.navIcon} aria-hidden="true">&#9675;</span>
+                Pair &amp; Control
+              </div>
             </div>
-          </div>
-          <div style={s.navSection}>
-            <div style={s.navLabel}>System</div>
-            <div style={s.navItem}>
-              <span style={s.navIcon} aria-hidden="true">&#8962;</span>
-              Remote Desktop
+            <div style={s.navSection}>
+              <div style={s.navLabel}>System</div>
+              <div className="nav-item-hover" style={{ ...s.navItem, color: "#444", cursor: "default" }} title="Coming soon">
+                <span style={s.navIcon} aria-hidden="true">&#8962;</span>
+                Remote Desktop
+                <span style={s.navChip}>soon</span>
+              </div>
+              <div className="nav-item-hover" style={s.navItem}>
+                <span style={s.navIcon} aria-hidden="true">&#10003;</span>
+                Auto-start
+                <span style={s.navChip}>on</span>
+              </div>
+              <div className="nav-item-hover" style={s.navItem}>
+                <span style={s.navIcon} aria-hidden="true">&#9748;</span>
+                Prevent Sleep
+              </div>
             </div>
-            <div style={s.navItem}>
-              <span style={s.navIcon} aria-hidden="true">&#10003;</span>
-              Auto-start
-              <span style={s.navChip}>on</span>
-            </div>
-            <div style={s.navItem}>
-              <span style={s.navIcon} aria-hidden="true">&#9748;</span>
-              Prevent Sleep
-            </div>
-          </div>
         </div>
         <div style={s.sidebarBottom}>
           <div style={s.agentRow}>
@@ -487,7 +541,7 @@ export default function HomePage() {
 
         <div className="dashboard-grid" style={s.grid}>
           {/* QR card */}
-          <div style={s.card}>
+          <div className="card-hover" style={s.card}>
             <div style={s.cardHeader}>
               <span style={s.cardIcon}>&#9635;</span>
               <div>
@@ -552,6 +606,7 @@ export default function HomePage() {
 
             <div style={s.cardActions}>
               <button
+                className="btn-primary"
                 style={
                   qr.phase === "loading"
                     ? { ...s.btnPrimary, opacity: 0.45, cursor: "not-allowed" }
@@ -565,6 +620,7 @@ export default function HomePage() {
               {qr.phase === "ready" && (
                 <a
                   href={qr.pairingUrl}
+                  className="btn-secondary"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={s.btnSecondary}
@@ -576,7 +632,7 @@ export default function HomePage() {
           </div>
 
           {/* Clients card */}
-          <div style={s.card}>
+          <div className="card-hover" style={s.card}>
             <div style={s.cardHeader}>
               <span style={s.cardIcon}>&#9633;</span>
               <div>
@@ -590,7 +646,7 @@ export default function HomePage() {
 
             <div style={s.clientList}>
               {approval.status === "approved" && (
-                <div style={s.clientRow}>
+                <div className="client-row-hover" style={s.clientRow}>
                   <div style={{ ...s.clientDot, background: "#4ade80" }} />
                   <div style={s.clientInfo}>
                     <div style={s.clientName}>Phone</div>
@@ -627,6 +683,7 @@ export default function HomePage() {
                 </div>
               </div>
               <div
+                className="toggle-hover"
                 style={autoApprove ? s.toggleOn : s.toggleOff}
                 role="switch"
                 aria-checked={autoApprove}
@@ -639,7 +696,7 @@ export default function HomePage() {
           </div>
 
           {/* How to pair card */}
-          <div style={{ ...s.card, ...s.wideCard }}>
+          <div className="card-hover" style={{ ...s.card, ...s.wideCard }}>
             <div style={s.cardHeader}>
               <span style={s.cardIcon}>&#8801;</span>
               <div>
@@ -686,7 +743,7 @@ export default function HomePage() {
           </div>
 
           {/* Activity log card */}
-          <div style={{ ...s.card, ...s.wideCard }}>
+          <div className="card-hover" style={{ ...s.card, ...s.wideCard }}>
             <div style={s.cardHeader}>
               <span style={s.cardIcon}>&#9654;</span>
               <div>
@@ -695,7 +752,8 @@ export default function HomePage() {
               </div>
               {events.length > 0 && (
                 <button
-                  style={{ ...s.btnSecondary, fontSize: 11, padding: "2px 10px" }}
+                  className="btn-secondary"
+                  style={{ ...s.btnSecondary, fontSize: 11, padding: "4px 14px", minHeight: 28 }}
                   onClick={() => setEvents([])}
                 >
                   Clear
@@ -707,7 +765,7 @@ export default function HomePage() {
                 <div style={s.logEmpty}>Waiting for agent events&hellip;</div>
               )}
               {events.map((evt) => (
-                <div key={evt.id} style={s.logRow}>
+                <div key={evt.id} className="log-row-hover" style={s.logRow}>
                   <span style={{ ...s.logLevel, color: levelColor(evt.level) }}>
                     {evt.level.toUpperCase()}
                   </span>
@@ -723,7 +781,7 @@ export default function HomePage() {
           </div>
 
           {/* API Key Management card */}
-          <div style={{ ...s.card, ...s.wideCard }}>
+          <div className="card-hover" style={{ ...s.card, ...s.wideCard }}>
             <div style={s.cardHeader}>
               <span style={s.cardIcon}>&#128273;</span>
               <div>
@@ -731,7 +789,8 @@ export default function HomePage() {
                 <div style={s.cardSub}>Persistent keys for programmatic access</div>
               </div>
               <button
-                style={{ ...s.btnSecondary, fontSize: 11, padding: "2px 10px" }}
+                className="btn-secondary"
+                style={{ ...s.btnSecondary, fontSize: 11, padding: "4px 14px", minHeight: 28 }}
                 onClick={generateApiKeyHandler}
               >
                 Generate Key
@@ -748,6 +807,7 @@ export default function HomePage() {
                     {apiKey}
                   </div>
                   <button
+                    className="btn-secondary"
                     style={{
                       ...s.btnSecondary, fontSize: 11, padding: "3px 12px", marginTop: 8,
                       ...(apiKeyCopied ? { background: "#166534", borderColor: "#4ade80", color: "#4ade80" } : {}),
@@ -756,8 +816,9 @@ export default function HomePage() {
                       try {
                         await navigator.clipboard.writeText(apiKey);
                         setApiKeyCopied(true);
+                        addToast("success", "API key copied to clipboard");
                         setTimeout(() => setApiKeyCopied(false), 2000);
-                      } catch { /* fallback — user can select manually */ }
+                      } catch { addToast("error", "Failed to copy API key"); }
                     }}
                   >
                     {apiKeyCopied ? "Copied!" : "Copy"}

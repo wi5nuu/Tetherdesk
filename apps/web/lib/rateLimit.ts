@@ -23,7 +23,7 @@ end
 return count
 `;
 
-async function checkRateLimit(key: string, failOpen: boolean): Promise<RateLimitResult> {
+export async function checkRateLimit(key: string, failOpen: boolean): Promise<RateLimitResult> {
   const redis = getRedis();
   try {
     const count = (await redis.eval(
@@ -42,10 +42,9 @@ async function checkRateLimit(key: string, failOpen: boolean): Promise<RateLimit
       remaining: Math.max(0, RATE_LIMIT_MAX_ATTEMPTS - count),
     };
   } catch (err) {
-    // Log Lua script errors for debugging
-    if (err instanceof Error && err.message.includes("ERR Error")) {
-      console.error(`[rateLimit] Lua script error: ${err.message}`);
-    }
+    const message = err instanceof Error ? err.message : String(err);
+    const name = err instanceof Error ? err.name : "UnknownError";
+    console.error(`[rateLimit] checkRateLimit error (${name}): ${message}`);
     
     if (failOpen) {
       // BUG-RL1: /start is a low-value target (no secrets returned) — failing

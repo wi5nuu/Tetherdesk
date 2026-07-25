@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { ErrorCode, type PairingQrPayload } from "@tetherdesk/protocol";
 import { getRedis } from "@/lib/redis";
 import { redisKeys } from "@/lib/keys";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 10;
@@ -22,7 +23,23 @@ function jsonError(code: string, message: string, status = 400) {
   return NextResponse.json({ ok: false, error: { code, message } }, { status });
 }
 
+function extractIp(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const ips = forwarded.split(",").map(s => s.trim());
+    const last = ips[ips.length - 1];
+    if (last) return last;
+  }
+  return "0.0.0.0";
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const ip = extractIp(request);
+  const rl = await checkRateLimit(`ratelimit:access:validate:${ip}`, true);
+  if (!rl.allowed) {
+    return jsonError(ErrorCode.RATE_LIMITED, "Too many attempts — try again later", 429);
+  }
+
   let body: ValidateBody;
   try {
     body = (await request.json()) as ValidateBody;

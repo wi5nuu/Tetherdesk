@@ -5,23 +5,32 @@ import { redisKeys } from "@/lib/keys";
 export const runtime = "nodejs";
 
 /**
- * GET /api/pairing/laptop-jwt?sessionId=xxx
+ * GET /api/pairing/laptop-jwt?sessionId=xxx&pairingToken=yyy
  *
  * Returns the laptop JWT token for a given session. The laptop JWT is stored
  * in the session record when POST /api/pairing/start is called. The dashboard
  * retrieves it here so it can authenticate POST /api/pairing/approval action=respond.
  *
- * The sessionId acts as a bearer — it's a 12-byte random value (96 bits) that
- * is only known to the agent and the dashboard (displayed in the QR code).
+ * Requires BOTH sessionId and pairingToken — the pairing token proves the caller
+ * has access to the active QR payload, preventing session hijacking via QR scan.
  */
 export async function GET(request: NextRequest) {
   const sessionId = request.nextUrl.searchParams.get("sessionId");
-  if (!sessionId) {
-    return NextResponse.json({ ok: false, error: "missing sessionId" }, { status: 400 });
+  const pairingToken = request.nextUrl.searchParams.get("pairingToken");
+
+  if (!sessionId || !pairingToken) {
+    return NextResponse.json({ ok: false, error: "missing sessionId or pairingToken" }, { status: 400 });
   }
 
   const redis = getRedis();
   const sessionKey = redisKeys.session(sessionId);
+  const pairKey = redisKeys.pairing(pairingToken);
+
+  // Verify the pairing token exists and points to this session
+  const pairRecord = await redis.hgetall<Record<string, string>>(pairKey);
+  if (!pairRecord || pairRecord.sessionId !== sessionId) {
+    return NextResponse.json({ ok: false, error: "invalid pairing token for session" }, { status: 401 });
+  }
 
   const laptopJwt = await redis.hget<string>(sessionKey, "laptopJwt");
   if (!laptopJwt) {

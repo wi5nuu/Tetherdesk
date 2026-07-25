@@ -5,6 +5,7 @@ import { getRedis } from "@/lib/redis";
 import { redisKeys } from "@/lib/keys";
 import { randomBytes } from "node:crypto";
 import { generateSessionId } from "@/lib/ids";
+import { authenticateRequest, verifyAgentSecret } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 10;
@@ -46,19 +47,23 @@ function keyLabel(key: string): string {
 // Body: { sessionId?: string }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const auth = await authenticateRequest(request);
+  if (!auth.ok && !verifyAgentSecret(request)) {
+    return jsonError(ErrorCode.UNAUTHORIZED, "authentication required");
+  }
+
   const body = await parseBody(request);
   const redis = getRedis();
 
   let sessionId: string;
 
-  if (body && typeof body.sessionId === "string" && body.sessionId) {
+  if (auth.ok) {
+    sessionId = auth.claims.sessionId;
+  } else if (body && typeof body.sessionId === "string" && body.sessionId) {
     sessionId = body.sessionId;
-    // Verify the session exists (but don't require bearerToken — API keys
-    // are self-authenticating and work independently of any agent session)
     const sessionKey = redisKeys.session(sessionId);
     const exists = await redis.exists(sessionKey);
     if (!exists) {
-      // Session expired or doesn't exist — generate a fresh one
       sessionId = generateSessionId();
       const now = Date.now();
       await redis.hset(redisKeys.session(sessionId), {
@@ -68,7 +73,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
     }
   } else {
-    // No session provided — create a standalone API key with its own session
     sessionId = generateSessionId();
     const now = Date.now();
     await redis.hset(redisKeys.session(sessionId), {
@@ -81,10 +85,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const apiKey = generateApiKey();
   const now = new Date().toISOString();
 
-  // Store key → sessionId mapping (no TTL — persistent until revoked)
   await redis.set(`${API_KEY_VALUE_PREFIX}${apiKey}`, sessionId);
 
-  // Add to session's key index for management
   const indexKey = `${API_KEY_INDEX_PREFIX}${sessionId}`;
   await redis.sadd(indexKey, apiKey);
 
@@ -100,6 +102,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 // GET /api/access/keys?sessionId=xxx — list all keys for a session
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const auth = await authenticateRequest(request);
+  if (!auth.ok && !verifyAgentSecret(request)) {
+    return jsonError(ErrorCode.UNAUTHORIZED, "authentication required");
+  }
+
   const sessionId = request.nextUrl.searchParams.get("sessionId");
   if (!sessionId) {
     return jsonError(ErrorCode.VALIDATION_FAILED, "sessionId query parameter is required");
@@ -122,6 +129,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 // Body: { apiKey: string }
 // ---------------------------------------------------------------------------
 export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  const auth = await authenticateRequest(request);
+  if (!auth.ok && !verifyAgentSecret(request)) {
+    return jsonError(ErrorCode.UNAUTHORIZED, "authentication required");
+  }
+
   const body = await parseBody(request);
   if (!body || typeof body.apiKey !== "string" || !body.apiKey) {
     return jsonError(ErrorCode.VALIDATION_FAILED, "apiKey is required");
@@ -130,17 +142,14 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
   const { apiKey } = body;
   const redis = getRedis();
 
-  // Look up which session owns this key
   const sessionId = await redis.get(`${API_KEY_VALUE_PREFIX}${apiKey}`);
   if (!sessionId || typeof sessionId !== "string") {
     return jsonError(ErrorCode.UNAUTHORIZED, "API key not found");
   }
 
-  // Remove from index
   const indexKey = `${API_KEY_INDEX_PREFIX}${sessionId}`;
   await redis.srem(indexKey, apiKey);
 
-  // Delete the key mapping
   await redis.del(`${API_KEY_VALUE_PREFIX}${apiKey}`);
 
   return jsonOk({ revoked: apiKey });
