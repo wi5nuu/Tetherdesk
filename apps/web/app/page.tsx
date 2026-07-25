@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 /* ------------------------------------------------------------------ */
@@ -168,36 +168,12 @@ function TerminalDemo() {
 
 function WhyChoose() {
   const benefits = [
-    { 
-      title: "Zero Infrastructure Cost", 
-      desc: "Runs on your own infrastructure. Deploy the Next.js backend anywhere — VPS, local network, or serverless. No paid subscriptions required.",
-      icon: "💰"
-    },
-    { 
-      title: "End-to-End Encrypted", 
-      desc: "X25519 ECDH key exchange + AES-256-GCM encryption. Session keys never leave your devices. Server only relays encrypted messages.",
-      icon: "🔒"
-    },
-    { 
-      title: "Direct P2P Connection", 
-      desc: "WebRTC connects your laptop and phone directly. The signaling server only facilitates the initial key exchange, then gets out of the way.",
-      icon: "🌐"
-    },
-    { 
-      title: "No App Store Required", 
-      desc: "Phone client is a Progressive Web App (PWA). Works on any modern browser - iOS Safari, Android Chrome, desktop browsers.",
-      icon: "📱"
-    },
-    { 
-      title: "90-Second Pairing", 
-      desc: "QR code expires in 90 seconds for security. One-time pairing keys (TD-XXXXXX) or persistent API keys (sk-xxx...) for repeat access.",
-      icon: "⚡"
-    },
-    { 
-      title: "Open Source & Auditable", 
-      desc: "Full source code available on GitHub. Deploy your own backend, audit the crypto, modify as needed. No vendor lock-in.",
-      icon: "🔓"
-    },
+    { title: "Zero Infrastructure Cost", desc: "Runs on your own infrastructure. Deploy the Next.js backend anywhere — no paid subscriptions required.", icon: "server" as const },
+    { title: "End-to-End Encrypted", desc: "X25519 ECDH key exchange + AES-256-GCM encryption. Session keys never leave your devices.", icon: "lock" as const },
+    { title: "Direct P2P Connection", desc: "WebRTC connects your laptop and phone directly. Signaling server gets out of the way after key exchange.", icon: "signal" as const },
+    { title: "No App Store Required", desc: "Phone client is a Progressive Web App. Works on any modern browser — Safari, Chrome, or desktop.", icon: "phone" as const },
+    { title: "90-Second Pairing", desc: "QR code auto-expires. One-time keys (TD-XXXXXX) or persistent API keys (sk-xxx...) for repeat access.", icon: "zapped" as const },
+    { title: "Open Source & Auditable", desc: "Full source on GitHub. Deploy your own backend, audit the crypto, modify as needed.", icon: "github" as const },
   ];
 
   return (
@@ -205,7 +181,7 @@ function WhyChoose() {
       <div style={t.wrap}>
         <h2 style={{ ...t.h2, ...t.center }}>Why TetherDesk?</h2>
         <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>
-          Built for developers who want secure remote access without the complexity
+          Built for developers who need secure remote access without the complexity
         </p>
         <div className="landing-grid" style={t.grid3}>
           {benefits.map((item) => (
@@ -213,9 +189,9 @@ function WhyChoose() {
               background: "#0f0f0f", 
               border: "1px solid #1a1a1a", 
               borderRadius: 12, 
-              padding: 28,
+              padding: 28, display: "flex", flexDirection: "column",
             }}>
-              <div style={{ fontSize: 32, marginBottom: 14 }}>{item.icon}</div>
+              <IconBox icon={item.icon} />
               <h3 style={t.h3}>{item.title}</h3>
               <p style={{ ...t.p, fontSize: 14 }}>{item.desc}</p>
             </div>
@@ -226,29 +202,45 @@ function WhyChoose() {
   );
 }
 
-function IconBox({ children }: { children: ReactNode }) {
+function SvgIcon({ path, viewBox }: { path: string; viewBox?: string }) {
+  return (
+    <svg width="22" height="22" viewBox={viewBox ?? "0 0 24 24"} fill="none" stroke="#4ade80" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d={path} />
+    </svg>
+  );
+}
+
+const ICONS = {
+  server:   "M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M2 14h20M10 6h4M10 18h4M6 10v.01M10 10v.01M14 10v.01M18 10v.01",
+  lock:     "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  signal:   "M22 12h-4l-3 9L9 3l-3 9H2",
+  monitor:  "M2 4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm4 16h12M8 20l4-4 4 4",
+  zapped:   "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
+  github:   "M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.114 2.504.336 1.909-1.293 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z",
+  phone:    "M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2Zm3 2v16M12 18h.01",
+};
+
+function IconBox({ icon }: { icon: keyof typeof ICONS }) {
   return (
     <div style={{
       width: 44, height: 44, borderRadius: 10,
       background: "linear-gradient(135deg, #166534 0%, #0a2e14 100%)",
       border: "1px solid #22c55e33",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 18, fontWeight: 700, color: "#4ade80", marginBottom: 14,
-      fontFamily: '"SF Mono", "Fira Code", monospace',
+      display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14,
     }}>
-      {children}
+      <SvgIcon path={ICONS[icon]} />
     </div>
   );
 }
 
 function Features() {
-  const items = [
-    { title: "Screen Control", desc: "View and control your laptop screen from your phone. Mouse, keyboard, and touch gestures via WebRTC.", icon: ">_" },
-    { title: "Zero Config", desc: "No port forwarding, no DNS setup. Just npx tetherdesk start and scan the QR code.", icon: "~/" },
-    { title: "E2E Encrypted", desc: "X25519 ECDH + AES-256-GCM. Session keys derived locally, never transmitted. Server only relays encrypted messages.", icon: "SSL" },
-    { title: "QR Pairing", desc: "Scan QR code from terminal with any camera app. 90-second expiry for security. No app store needed.", icon: "QR" },
-    { title: "Persistent Keys", desc: "Generate API keys (sk-xxx...) from dashboard for repeat access without QR scanning every time.", icon: "KEY" },
-    { title: "Mobile PWA", desc: "Phone client runs in browser as Progressive Web App. iOS Safari, Android Chrome - no installation.", icon: "PWA" },
+  const items: { title: string; desc: string; icon: keyof typeof ICONS }[] = [
+    { title: "Screen Control", desc: "View and control your laptop screen from your phone. Mouse, keyboard, and touch gestures via WebRTC.", icon: "monitor" },
+    { title: "Zero Config", desc: "No port forwarding, no DNS setup. Just run npx tetherdesk start and scan the QR code.", icon: "zapped" },
+    { title: "E2E Encrypted", desc: "X25519 ECDH + AES-256-GCM. Session keys derived locally, never transmitted.", icon: "lock" },
+    { title: "QR Pairing", desc: "Scan QR code with any camera app. 90-second expiry for security. No app store needed.", icon: "phone" },
+    { title: "Persistent Keys", desc: "Generate API keys (sk-xxx...) from dashboard for repeat access without scanning.", icon: "server" },
+    { title: "Mobile PWA", desc: "Phone client runs in browser as Progressive Web App. iOS Safari, Android Chrome, desktop.", icon: "signal" },
   ];
 
   return (
@@ -262,9 +254,9 @@ function Features() {
               background: "#0f0f0f", 
               border: "1px solid #1a1a1a", 
               borderRadius: 12, 
-              padding: 28,
+              padding: 28, display: "flex", flexDirection: "column",
             }}>
-              <IconBox>{item.icon}</IconBox>
+              <IconBox icon={item.icon} />
               <h3 style={t.h3}>{item.title}</h3>
               <p style={{ ...t.p, fontSize: 14 }}>{item.desc}</p>
             </div>
