@@ -387,6 +387,7 @@ export default function PairPage() {
             <p style={styles.label}>Pairing failed</p>
             <p style={styles.errorMessage}>{state.message}</p>
             <button
+              className="btn-secondary"
               style={styles.button}
               onClick={() => {
                 stopCamera();

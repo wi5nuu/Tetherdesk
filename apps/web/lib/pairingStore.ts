@@ -168,10 +168,9 @@ export async function consumePairingToken(pairingToken: string): Promise<Consume
       record: { laptopPubKey, laptopEphemeralPubKey, sessionId, createdAt },
     };
   } catch (err) {
-    // Log Lua script errors for debugging
-    if (err instanceof Error && err.message.includes("ERR Error")) {
-      console.error(`[pairingStore] Lua script error: ${err.message}`);
-    }
+    const message = err instanceof Error ? err.message : String(err);
+    const name = err instanceof Error ? err.name : "UnknownError";
+    console.error(`[pairingStore] consumePairingToken error (${name}): ${message}`);
     // On Lua script error or Redis unavailability, treat as missing token
     // (fail-closed — don't allow pairing to proceed with corrupt state)
     return { status: "missing" };

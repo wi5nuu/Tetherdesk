@@ -179,6 +179,25 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
       try {
         ({ url: tunnelUrl, proc: tunnelProc } = await startTunnel());
         procs.push(tunnelProc);
+
+        // Watchdog: restart cloudflared automatically if it crashes
+        tunnelProc.on("exit", (code) => {
+          if (code !== 0 && code !== null) {
+            console.log(pc.yellow(`\n  Tunnel exited with code ${code}, restarting…`));
+            startTunnel().then((restarted) => {
+              tunnelUrl = restarted.url;
+              tunnelProc = restarted.proc;
+              procs.push(restarted.proc);
+              readConfig().then((config) =>
+                writeConfig({ ...config, backendOrigin: tunnelUrl })
+              ).then(() => {
+                console.log(pc.green(`  Tunnel restarted: ${tunnelUrl}`));
+              });
+            }).catch(() => {
+              console.error(pc.red("  Failed to restart tunnel. Run `tetherdesk start` again."));
+            });
+          }
+        });
       } catch (err) {
         throw new Error(
           `Tunnel failed: ${err instanceof Error ? err.message : String(err)}\n\n` +

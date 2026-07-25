@@ -569,7 +569,7 @@ export default function ControlPage() {
       void sendEncryptedInput(event);
       e.preventDefault();
     },
-    [], // eslint-disable-line react-hooks/exhaustive-deps
+    [resolution, sendEncryptedInput],
   );
 
 
@@ -740,7 +740,7 @@ function ErrorScreen({
       </div>
       <p style={styles.errorLabel}>Connection failed</p>
       <p style={styles.errorMessage}>{message}</p>
-      <button style={styles.retryButton} onClick={onRetry}>
+      <button className="btn-secondary" style={styles.retryButton} onClick={onRetry}>
         Retry
       </button>
     </div>

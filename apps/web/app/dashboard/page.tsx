@@ -893,8 +893,6 @@ const s: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     justifyContent: "space-between",
     padding: "20px 0",
-    position: "relative",
-    zIndex: 1000,
   },
   sidebarOpen: {
     position: "fixed",

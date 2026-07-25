@@ -63,10 +63,9 @@ export async function drainMailbox(sessionId: string, recipient: string): Promis
       .reverse()
       .map((item) => (typeof item === "string" ? JSON.parse(item) : item));
   } catch (err) {
-    // Log Lua script errors for debugging
-    if (err instanceof Error && err.message.includes("ERR Error")) {
-      console.error(`[mailbox] Lua script error: ${err.message}`);
-    }
+    const message = err instanceof Error ? err.message : String(err);
+    const name = err instanceof Error ? err.name : "UnknownError";
+    console.error(`[mailbox] drainMailbox error (${name}): ${message}`);
     // On Lua script error or Redis unavailability, return empty array
     // (fail-safe — mailbox messages are queued for retry anyway)
     return [];

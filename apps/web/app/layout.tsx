@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import "./landing.css";
+import { ToastWrapper } from "./toast-wrapper";
 
 export const metadata: Metadata = {
   title: "TetherDesk",
@@ -18,8 +19,6 @@ export const viewport: Viewport = {
   themeColor: "#0a0a0a",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 };
 
 // Next.js requires a default export for layout files — this is a framework
@@ -32,7 +31,9 @@ function RootLayout({ children }: { children: ReactNode }) {
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
       </head>
-      <body>{children}</body>
+      <body>
+        <ToastWrapper>{children}</ToastWrapper>
+      </body>
     </html>
   );
 }

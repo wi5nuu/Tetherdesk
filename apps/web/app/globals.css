@@ -29,12 +29,189 @@ html, body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
 
-/* Prevent text selection in control UI */
-body {
-  user-select: none;
-  -webkit-user-select: none;
+/* Global focus ring for keyboard navigation — WCAG 2.4.7 */
+:focus-visible {
+  outline: 2px solid #4ade80;
+  outline-offset: 2px;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Prevent text selection in control UI only — applied via class, not globally */
+body:not(.no-select) {
+  user-select: auto;
+  -webkit-user-select: auto;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Interactive state utilities                                        */
+/*  Applied via className alongside inline styles for hover/focus      */
+/* ------------------------------------------------------------------ */
+
+/* Card hover lift effect */
+.card-hover {
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.card-hover:hover {
+  border-color: #2a2a2a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.card-hover:focus-visible {
+  border-color: #4ade80;
+  outline: none;
+}
+
+/* Primary button hover (green) */
+.btn-primary {
+  transition: background-color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+.btn-primary:hover {
+  background-color: #22c55e;
+  box-shadow: 0 2px 12px rgba(74,222,128,0.3);
+}
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+/* Secondary button hover (outline/dark) */
+.btn-secondary {
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+.btn-secondary:hover {
+  background-color: rgba(255,255,255,0.05);
+  border-color: #3a3a3a;
+  color: #f0f0f0;
+}
+.btn-secondary:active {
+  transform: scale(0.97);
+}
+
+/* Allow button (approval modal) */
+.btn-allow {
+  transition: background-color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+.btn-allow:hover {
+  background-color: #22c55e;
+  box-shadow: 0 2px 16px rgba(74,222,128,0.4);
+}
+.btn-allow:active {
+  transform: scale(0.97);
+}
+
+/* Deny button */
+.btn-deny {
+  transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+}
+.btn-deny:hover {
+  background-color: #1f0a0a;
+  border-color: #7f1d1d;
+}
+.btn-deny:active {
+  transform: scale(0.97);
+}
+
+/* Nav item hover */
+.nav-item-hover {
+  transition: background-color 0.15s, color 0.15s;
+}
+.nav-item-hover:hover {
+  background-color: #141414;
+  color: #e0e0e0;
+}
+.nav-item-hover:focus-visible {
+  background-color: #141414;
+  outline: none;
+  border-right: 2px solid #4ade80;
+}
+
+/* Link hover effect (underline on hover) */
+.link-hover {
+  transition: color 0.15s;
+}
+.link-hover:hover {
+  color: #4ade80;
+}
+.link-hover:focus-visible {
+  outline: 2px solid #4ade80;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Landing page link hover */
+.link-landing {
+  transition: color 0.15s;
+}
+.link-landing:hover {
+  color: #e0e0e0;
+}
+
+/* Toggle switch hover */
+.toggle-hover {
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.toggle-hover:hover {
+  box-shadow: 0 0 0 2px rgba(74,222,128,0.15);
+}
+
+/* Log row hover */
+.log-row-hover {
+  transition: background-color 0.15s;
+}
+.log-row-hover:hover {
+  background-color: rgba(255,255,255,0.02);
+}
+
+/* Client row hover */
+.client-row-hover {
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.client-row-hover:hover {
+  background-color: #161616;
+  border-color: #252525;
+}
+
+/* Landing nav bar link */
+.navbar-link {
+  transition: color 0.15s, background-color 0.15s;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+.navbar-link:hover {
+  background-color: rgba(255,255,255,0.04);
+  color: #e0e0e0;
+}
+.navbar-link:focus-visible {
+  outline: 2px solid #4ade80;
+  outline-offset: 2px;
+}
+
+/* Mobile menu link */
+.mobile-menu-link {
+  transition: color 0.15s, background-color 0.15s;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.mobile-menu-link:hover {
+  background-color: rgba(255,255,255,0.04);
+  color: #e0e0e0;
+}
+
+/* Toast slide-in animation */
+@keyframes toastIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 /* Spinner animation used by page.tsx inline styles */
@@ -84,19 +261,38 @@ body {
   z-index: 999;
 }
 
-/* Dashboard sidebar */
+/* Dashboard sidebar — desktop: relative flow */
 .dashboard-sidebar {
+  position: relative;
   transition: transform 0.3s ease;
 }
 
-/* Dashboard sidebar when open on mobile */
-.dashboard-sidebar-open {
-  position: fixed !important;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  transform: translateX(0) !important;
-  z-index: 1000;
+/* Dashboard sidebar when open — only applies on mobile via max-width 768px */
+@media (max-width: 768px) {
+  .dashboard-sidebar-open {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(0) !important;
+    z-index: 1000;
+  }
+}
+
+/* Tablet responsive breakpoint (768-1024px) */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .dashboard-sidebar {
+    width: 180px;
+  }
+  .dashboard-content {
+    padding: 24px !important;
+  }
+  .docs-sidebar {
+    width: 180px;
+  }
+  .docs-wrap {
+    max-width: 100%;
+  }
 }
 
 /* Responsive breakpoints */
@@ -112,8 +308,10 @@ body {
     top: 0;
     left: 0;
     bottom: 0;
+    width: 240px !important;
     transform: translateX(-100%);
     z-index: 1000;
+    overflow-y: auto;
   }
   
   /* Show overlay when sidebar is open */
@@ -121,9 +319,11 @@ body {
     display: block !important;
   }
   
-  /* Dashboard content padding adjustment for mobile */
+  /* Dashboard content - prevent overflow on mobile */
   .dashboard-content {
     padding: 60px 16px 20px !important;
+    min-width: 0;
+    width: 100%;
   }
   
   /* Dashboard grid - 1 column on mobile */
@@ -135,6 +335,14 @@ body {
   .dashboard-qr-img {
     width: 180px !important;
     height: 180px !important;
+  }
+  
+  /* Toast - full width on mobile, avoid clipping */
+  .toast-container {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 12px !important;
+    max-width: 100% !important;
   }
   
   /* Landing page sections - smaller padding on mobile */
@@ -179,12 +387,13 @@ body {
     padding: 20px 16px !important;
   }
   
-  /* Navbar - responsive */
-  .navbar-desktop {
+  /* Docs sidebar - hide on mobile */
+  .docs-sidebar {
     display: none !important;
   }
   
-  .navbar-mobile {
-    display: flex !important;
+  /* Docs hero - smaller font on mobile */
+  .docs-hero h1 {
+    font-size: 28px !important;
   }
 }

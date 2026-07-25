@@ -32,7 +32,6 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 15, outline: "none", fontFamily: '"SF Mono", "Fira Code", monospace',
     boxSizing: "border-box" as const,
   },
-  inputFocus: { borderColor: "#4ade80" },
   inputError: { borderColor: "#f87171" },
   btn: {
     width: "100%", padding: "12px", background: "#4ade80", color: "#0a0a0a",
@@ -115,7 +114,7 @@ export default function AccessPage() {
             placeholder="sk-xxx... or One-Time Key (ABC123)"
             disabled={phase.phase === "validating"}
             autoFocus
-            autoComplete="off"
+            autoComplete="one-time-code"
             spellCheck={false}
             style={{
               ...s.input,
@@ -138,10 +137,11 @@ export default function AccessPage() {
 
           <button
             type="submit"
+            className="btn-primary"
             disabled={!isValidKey || phase.phase === "validating"}
             style={{ ...s.btn, ...(!isValidKey || phase.phase === "validating" ? s.btnDisabled : {}) }}
           >
-            {phase.phase === "validating" ? "Validating..." : "Connect"}
+            {phase.phase === "validating" ? <span style={{ display: "inline-flex", alignItems: "center", gap: 6, justifyContent: "center" }}><span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid #0a0a0a", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />Validating...</span> : "Connect"}
           </button>
         </form>
 
@@ -151,7 +151,7 @@ export default function AccessPage() {
           <div style={{ fontWeight: 500, fontSize: 12, color: "#888" }}>Option A: Persistent API Key</div>
           <div style={s.setupStep}>
             Open{" "}
-            <Link href="/dashboard" style={{ color: "#4ade80", textDecoration: "none" }}>
+            <Link href="/dashboard" className="link-hover" style={{ color: "#4ade80", textDecoration: "none" }}>
               dashboard
             </Link>{" "}
             on your laptop, click <strong style={{ color: "#888" }}>Generate Key</strong>, then enter the <strong style={{ color: "#888" }}>sk-xxx</strong> key here.
@@ -170,11 +170,11 @@ export default function AccessPage() {
       </div>
 
       <div style={s.footer}>
-        <Link href="/" style={s.link}>Home</Link>
+        <Link href="/" className="link-landing" style={s.link}>Home</Link>
         <span style={{ color: "#333" }}>·</span>
-        <Link href="/dashboard" style={s.link}>Dashboard</Link>
+        <Link href="/dashboard" className="link-landing" style={s.link}>Dashboard</Link>
         <span style={{ color: "#333" }}>·</span>
-        <a href="https://github.com/wi5nuu/Tetherdesk#readme" style={s.link} target="_blank" rel="noopener noreferrer">Docs</a>
+        <a href="https://github.com/wi5nuu/Tetherdesk#readme" className="link-landing" style={s.link} target="_blank" rel="noopener noreferrer">Docs</a>
       </div>
     </div>
   );

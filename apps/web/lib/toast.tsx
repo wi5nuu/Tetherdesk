@@ -47,10 +47,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ addToast }}>
       {children}
-      <div style={{
+      <div className="toast-container" style={{
         position: "fixed", bottom: 20, right: 20, zIndex: 9999,
         display: "flex", flexDirection: "column", gap: 8,
-        maxWidth: 360, width: "100%", pointerEvents: "none",
+        maxWidth: 360, width: "calc(100% - 40px)", pointerEvents: "none",
       }}>
         {toasts.map((t) => {
           const c = COLORS[t.type];
