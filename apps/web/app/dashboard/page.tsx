@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { generateX25519KeyPair, toBase64Url } from "@tetherdesk/crypto";
 import { useToast } from "../../lib/toast";
+import { useLang } from "../../lib/lang-context";
+import { LangSwitcher } from "../components/LangSwitcher";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,6 +80,8 @@ function levelColor(level: ActivityEvent["level"]): string {
 
 export default function HomePage() {
   const { addToast } = useToast();
+  const { tr } = useLang();
+  const d = tr.dashboard;
   const [qr, setQr] = useState<QrPhase>({ phase: "loading" });
   const [timeLeft, setTimeLeft] = useState(90);
   const [approval, setApproval] = useState<ApprovalPhase>({ status: "idle" });
@@ -385,16 +389,16 @@ export default function HomePage() {
             <div style={s.modal}>
               <div style={s.modalHeader}>
                 <span style={s.modalDot} />
-                <span style={s.modalLabel}>Incoming Connection</span>
+                <span style={s.modalLabel}>{d.approvalTitle}</span>
               </div>
               <h2 id="approval-title" style={s.modalTitle}>
-                A device wants to control this laptop
+                {d.approvalBody}
               </h2>
               <p id="approval-desc" style={s.modalBody}>
-                Someone scanned your pairing QR. Approve only if you initiated this.
+                {d.approvalBody}
               </p>
             <div style={s.modalMeta}>
-              Session{" "}
+              {d.approvalSession}{" "}
               <code style={s.monoChip}>
                 {pendingSessionId.slice(0, 8)}&hellip;{pendingSessionId.slice(-4)}
               </code>
@@ -405,14 +409,14 @@ export default function HomePage() {
                 style={s.allowBtn}
                 onClick={() => { void respondToApproval(pendingSessionId, true); }}
               >
-                Allow
+                {d.allow}
               </button>
               <button
                 className="btn-deny"
                 style={s.denyBtn}
                 onClick={() => { void respondToApproval(pendingSessionId, false); }}
               >
-                Deny
+                {d.deny}
               </button>
             </div>
           </div>
@@ -477,7 +481,7 @@ export default function HomePage() {
               }}
             />
             <span style={s.agentText}>
-              {agentOnline ? "Agent running" : "Agent offline"}
+              {agentOnline ? d.agentOnline : d.agentOffline}
             </span>
           </div>
         </div>
@@ -487,12 +491,13 @@ export default function HomePage() {
       <main className="dashboard-content" style={s.content} aria-label="Main content">
         <header style={s.pageHeader}>
           <div>
-            <h1 style={s.pageTitle}>Pair Devices</h1>
+            <h1 style={s.pageTitle}>{d.pageTitle}</h1>
             <p style={s.pageSubtitle}>
-              Scan the QR code or open the link on your phone
+              {d.pageSubtitle}
             </p>
           </div>
           <div style={s.headerRight}>
+            <LangSwitcher />
             <span
               style={{
                 ...s.pill,
@@ -507,7 +512,7 @@ export default function HomePage() {
                   background: agentOnline ? "#4ade80" : "#f87171",
                 }}
               />
-              {agentOnline ? "Agent active" : "Agent offline"}
+              {agentOnline ? d.agentOnline : d.agentOffline}
             </span>
           </div>
         </header>
@@ -522,7 +527,7 @@ export default function HomePage() {
             }}
             role="status"
           >
-            &#10003; Connection approved &mdash; remote session is active
+            &#10003; {d.approved} &mdash; remote session is active
           </div>
         )}
         {approval.status === "declined" && (
@@ -535,7 +540,7 @@ export default function HomePage() {
             }}
             role="status"
           >
-            &times; Connection declined
+            &times; {d.declined}
           </div>
         )}
 
@@ -545,11 +550,11 @@ export default function HomePage() {
             <div style={s.cardHeader}>
               <span style={s.cardIcon}>&#9635;</span>
               <div>
-                <div style={s.cardTitle}>QR Pairing Code</div>
+                <div style={s.cardTitle}>{d.qrTitle}</div>
                 <div style={s.cardSub}>
-                  Single use &middot;{" "}
+                  {d.qrSub} &middot;{" "}
                   {qr.phase === "ready"
-                    ? `expires in ${timeLeft}s`
+                    ? `${d.expiresIn} ${timeLeft}s`
                     : "loading…"}
                 </div>
               </div>
@@ -615,7 +620,7 @@ export default function HomePage() {
                 onClick={handleRefreshQr}
                 disabled={qr.phase === "loading"}
               >
-                {qr.phase === "loading" ? "Generating…" : "New QR Code"}
+                {qr.phase === "loading" ? "Generating…" : d.newQr}
               </button>
               {qr.phase === "ready" && (
                 <a
@@ -625,8 +630,7 @@ export default function HomePage() {
                   rel="noopener noreferrer"
                   style={s.btnSecondary}
                 >
-                  Open on Phone
-                </a>
+                  {d.openOnPhone}                </a>
               )}
             </div>
           </div>
@@ -636,8 +640,8 @@ export default function HomePage() {
             <div style={s.cardHeader}>
               <span style={s.cardIcon}>&#9633;</span>
               <div>
-                <div style={s.cardTitle}>Clients</div>
-                <div style={s.cardSub}>Paired &amp; waiting</div>
+                <div style={s.cardTitle}>{d.clientsTitle}</div>
+                <div style={s.cardSub}>{d.clientsSub}</div>
               </div>
               <span style={s.navChip}>
                 {approval.status === "approved" ? "1/1 online" : "0/1 online"}
@@ -667,8 +671,8 @@ export default function HomePage() {
               )}
               {approval.status !== "approved" && (
                 <div style={s.emptyState}>
-                  <p style={s.emptyText}>No active clients</p>
-                  <p style={s.emptyHint}>Scan the QR code to connect your phone</p>
+                  <p style={s.emptyText}>{d.noClients}</p>
+                  <p style={s.emptyHint}>{d.noClientsHint}</p>
                 </div>
               )}
             </div>
@@ -676,10 +680,10 @@ export default function HomePage() {
             <div style={s.settingRow}>
               <div style={s.settingLeft}>
                 <div style={s.settingLabel}>
-                  &#9634; Auto-approve new devices
+                  &#9634; {d.autoApprove}
                 </div>
                 <div style={s.settingHint}>
-                  Require manual approval for new devices
+                  {d.autoApproveHint}
                 </div>
               </div>
               <div
@@ -700,41 +704,41 @@ export default function HomePage() {
             <div style={s.cardHeader}>
               <span style={s.cardIcon}>&#8801;</span>
               <div>
-                <div style={s.cardTitle}>How to pair</div>
-                <div style={s.cardSub}>Takes under 30 seconds</div>
+                <div style={s.cardTitle}>{d.howTitle}</div>
+                <div style={s.cardSub}>{d.howSubtitle}</div>
               </div>
             </div>
             <ol style={s.steps}>
               <li style={s.step}>
                 <div style={s.stepNum}>1</div>
                 <div>
-                  <div style={s.stepTitle}>Run the agent on this laptop</div>
-                  <div style={s.stepHint}>Open a terminal and run:</div>
-                  <code style={s.codeChip}>npx tetherdesk start</code>
-                  <div style={s.stepHint}>The agent starts and this QR code activates automatically.</div>
+                  <div style={s.stepTitle}>{d.step1Title}</div>
+                  <div style={s.stepHint}>{d.step1Hint}</div>
+                  <code style={s.codeChip}>{d.step1Code}</code>
+                  <div style={s.stepHint}>{d.step1Hint2}</div>
                 </div>
               </li>
               <li style={s.step}>
                 <div style={s.stepNum}>2</div>
                 <div>
-                  <div style={s.stepTitle}>Scan the QR code with your phone</div>
-                  <div style={s.stepHint}>Open your phone camera and point it at the QR code on the left. Your phone browser will open automatically.</div>
+                  <div style={s.stepTitle}>{d.step2Title}</div>
+                  <div style={s.stepHint}>{d.step2Hint}</div>
                 </div>
               </li>
               <li style={s.step}>
                 <div style={s.stepNum}>3</div>
                 <div>
-                  <div style={s.stepTitle}>Tap Allow on this laptop screen</div>
+                  <div style={s.stepTitle}>{d.step3Title}</div>
                   <div style={s.stepHint}>
-                    An approval dialog will appear here. Tap <strong style={{ color: "#4ade80" }}>Allow</strong> to confirm the connection from your phone.
+                    {d.step3Hint} <strong style={{ color: "#4ade80" }}>{d.step3Allow}</strong> {d.step3Hint2}
                   </div>
                 </div>
               </li>
               <li style={s.step}>
                 <div style={s.stepNum}>4</div>
                 <div>
-                  <div style={s.stepTitle}>Control your laptop from your phone</div>
-                  <div style={s.stepHint}>Your laptop screen streams to your phone. Tap to click, swipe to scroll — full remote control is now active.</div>
+                  <div style={s.stepTitle}>{d.step4Title}</div>
+                  <div style={s.stepHint}>{d.step4Hint}</div>
                 </div>
               </li>
             </ol>
@@ -745,8 +749,8 @@ export default function HomePage() {
             <div style={s.cardHeader}>
               <span style={s.cardIcon}>&#9654;</span>
               <div>
-                <div style={s.cardTitle}>Activity Log</div>
-                <div style={s.cardSub}>Real-time events from the agent</div>
+                <div style={s.cardTitle}>{d.logTitle}</div>
+                <div style={s.cardSub}>{d.logSub}</div>
               </div>
               {events.length > 0 && (
                 <button
@@ -754,13 +758,13 @@ export default function HomePage() {
                   style={{ ...s.btnSecondary, fontSize: 11, padding: "4px 14px", minHeight: 28 }}
                   onClick={() => setEvents([])}
                 >
-                  Clear
+                  {d.clearLog}
                 </button>
               )}
             </div>
             <div style={s.logPanel}>
               {events.length === 0 && (
-                <div style={s.logEmpty}>Waiting for agent events&hellip;</div>
+                <div style={s.logEmpty}>{d.logEmpty}</div>
               )}
               {events.map((evt) => (
                 <div key={evt.id} className="log-row-hover" style={s.logRow}>
@@ -783,15 +787,15 @@ export default function HomePage() {
             <div style={s.cardHeader}>
               <span style={s.cardIcon}>&#128273;</span>
               <div>
-                <div style={s.cardTitle}>API Keys</div>
-                <div style={s.cardSub}>Persistent keys for programmatic access</div>
+                <div style={s.cardTitle}>{d.apiTitle}</div>
+                <div style={s.cardSub}>{d.apiSub}</div>
               </div>
               <button
                 className="btn-secondary"
                 style={{ ...s.btnSecondary, fontSize: 11, padding: "4px 14px", minHeight: 28 }}
                 onClick={generateApiKeyHandler}
               >
-                Generate Key
+                {d.generateKey}
               </button>
             </div>
             <div style={{ padding: "12px 16px" }}>
@@ -800,7 +804,7 @@ export default function HomePage() {
               )}
               {apiKey && (
                 <div style={{ background: "#0a0a0a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "10px 14px", marginTop: 4 }}>
-                  <div style={{ fontSize: 11, color: "#888", marginBottom: 6 }}>Your new API key (shown once):</div>
+                  <div style={{ fontSize: 11, color: "#888", marginBottom: 6 }}>{d.keyOnce}:</div>
                   <div style={{ fontFamily: '"SF Mono", "Fira Code", monospace', fontSize: 13, color: "#4ade80", wordBreak: "break-all" }}>
                     {apiKey}
                   </div>
@@ -819,13 +823,13 @@ export default function HomePage() {
                       } catch { addToast("error", "Failed to copy API key"); }
                     }}
                   >
-                    {apiKeyCopied ? "Copied!" : "Copy"}
+                    {apiKeyCopied ? d.copied : d.copyKey}
                   </button>
                 </div>
               )}
               {!apiKey && !apiKeyError && (
                 <div style={{ fontSize: 12, color: "#555" }}>
-                  Generate a persistent API key to connect from the access page without scanning a QR code.
+                  {d.apiSub}
                 </div>
               )}
             </div>

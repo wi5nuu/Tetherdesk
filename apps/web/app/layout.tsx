@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import "./landing.css";
 import { ToastWrapper } from "./toast-wrapper";
+import { LangProvider } from "../lib/lang-context";
 
 export const metadata: Metadata = {
   title: "TetherDesk",
@@ -32,7 +33,9 @@ function RootLayout({ children }: { children: ReactNode }) {
         <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
       </head>
       <body>
-        <ToastWrapper>{children}</ToastWrapper>
+        <LangProvider>
+          <ToastWrapper>{children}</ToastWrapper>
+        </LangProvider>
       </body>
     </html>
   );
