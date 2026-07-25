@@ -35,14 +35,12 @@ const APP_VERSION = "2.1.21";
 /* ------------------------------------------------------------------ */
 
 function NavLink({ label, href }: { label: string; href: string }) {
-  const [h, setH] = useState(false);
   return (
-    <a href={href}
-      style={{ color: h ? "#4ade80" : "#888", textDecoration: "none", cursor: "pointer", fontSize: 14, fontWeight: 500, transition: "color 0.15s" }}
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => setH(false)}>
+    <Link href={href}
+      className="navbar-link"
+      style={{ color: "#888", textDecoration: "none", cursor: "pointer", fontSize: 14, fontWeight: 500 }}>
       {label}
-    </a>
+    </Link>
   );
 }
 
@@ -69,8 +67,8 @@ function Navbar() {
           <div style={{ display: "none", gap: 24, alignItems: "center" }} className="landing-nav-desktop">
             {links.map((l) => <NavLink key={l.label} label={l.label} href={l.href} />)}
           </div>
-          <Link href="/access" style={{ ...t.btn, ...t.btnPrimary, fontSize: 13, padding: "8px 18px" }}>Get Started</Link>
-          <button onClick={() => setMenu(!menu)} style={{ background: "none", border: "none", color: "#888", fontSize: 22, cursor: "pointer", display: "none" }} className="landing-menu-btn">
+          <Link href="/access" className="btn-primary" style={{ ...t.btn, ...t.btnPrimary, fontSize: 13, padding: "8px 18px" }}>Get Started</Link>
+          <button onClick={() => setMenu(!menu)} style={{ background: "none", border: "none", color: "#888", fontSize: 22, cursor: "pointer", display: "none" }} className="landing-menu-btn" aria-expanded={menu} aria-label="Toggle navigation menu">
             {menu ? "✕" : "☰"}
           </button>
         </div>
@@ -78,7 +76,7 @@ function Navbar() {
       {menu && (
         <div style={{ borderTop: "1px solid #141414", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
           {links.map((l) => (
-            <a key={l.label} href={l.href} style={{ color: "#888", textDecoration: "none", cursor: "pointer", fontSize: 15 }}
+            <a key={l.label} href={l.href} className="mobile-menu-link" style={{ color: "#888", textDecoration: "none", cursor: "pointer", fontSize: 15 }}
               onClick={() => setMenu(false)}>{l.label}</a>
           ))}
         </div>
@@ -113,8 +111,8 @@ function Hero() {
           Zero-config remote desktop. Scan QR, tap to control. End-to-end encrypted P2P connection via WebRTC.
         </p>
         <div className="landing-buttons" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
-          <Link href="/access" style={{ ...t.btn, ...t.btnPrimary, fontSize: 16, padding: "14px 36px" }}>Start Pairing</Link>
-          <Link href="/dashboard" style={{ ...t.btn, ...t.btnOutline, fontSize: 16, padding: "14px 36px" }}>Dashboard</Link>
+          <Link href="/access" className="btn-primary" style={{ ...t.btn, ...t.btnPrimary, fontSize: 16, padding: "14px 36px" }}>Start Pairing</Link>
+          <Link href="/dashboard" className="btn-secondary" style={{ ...t.btn, ...t.btnOutline, fontSize: 16, padding: "14px 36px" }}>Dashboard</Link>
         </div>
       </div>
     </section>
@@ -123,15 +121,15 @@ function Hero() {
 
 function TerminalDemo() {
   const lines = [
-    { text: "$ npm install -g tetherdesk", dim: true },
+    { text: "$ npx tetherdesk start", dim: true },
     { text: "", dim: false },
-    { text: "$ tetherdesk start", dim: true },
-    { text: "→ Starting server...", dim: false },
-    { text: "→ Creating tunnel...", dim: false },
-    { text: "✓ Server running on http://localhost:3000", dim: false },
-    { text: "✓ Tunnel ready: https://xxx.trycloudflare.com", dim: false },
+    { text: " TetherDesk is running!", dim: false, color: "#4ade80" },
     { text: "", dim: false },
-    { text: "  Ready in 30 seconds", dim: false, prompt: false },
+    { text: "  1. Open the dashboard:  http://localhost:3000", dim: false },
+    { text: "  2. Scan the QR code on your phone", dim: false },
+    { text: "  3. Tap Allow on this laptop to approve the connection", dim: false },
+    { text: "", dim: false },
+    { text: "  Press Ctrl+C to stop all processes.", dim: true },
   ];
 
   return (
@@ -146,15 +144,15 @@ function TerminalDemo() {
           </div>
           <div style={{ padding: "16px 20px", ...t.mono, fontSize: 13, lineHeight: 1.7 }}>
             {lines.map((l, i) => (
-              <div key={i} style={{ color: l.dim !== false ? "#888" : "#ccc", whiteSpace: "pre-wrap" }}>
+              <div key={i} style={{ color: l.color ?? (l.dim !== false ? "#888" : "#ccc"), whiteSpace: "pre-wrap" }}>
                 {l.text}
               </div>
             ))}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
               {[
-                { label: "100% Secure", color: "#4ade80" },
-                { label: "<50ms Latency", color: "#4ade80" },
-                { label: "24/7 Available", color: "#4ade80" },
+                { label: "E2E Encrypted", color: "#4ade80" },
+                { label: "P2P WebRTC", color: "#4ade80" },
+                { label: "Open Source", color: "#4ade80" },
               ].map((s) => (
                 <span key={s.label} style={{ fontSize: 12, color: s.color, border: "1px solid #1f1f1f", borderRadius: 20, padding: "2px 10px" }}>
                   ✓ {s.label}
@@ -172,7 +170,7 @@ function WhyChoose() {
   const benefits = [
     { 
       title: "Zero Infrastructure Cost", 
-      desc: "Runs entirely on free tiers: Vercel Hobby + Upstash free Redis. No monthly subscription, no hidden charges.",
+      desc: "Runs on your own infrastructure. Deploy the Next.js backend anywhere — VPS, local network, or serverless. No paid subscriptions required.",
       icon: "💰"
     },
     { 
@@ -182,7 +180,7 @@ function WhyChoose() {
     },
     { 
       title: "Direct P2P Connection", 
-      desc: "WebRTC connects your laptop and phone directly. Vercel backend only helps with initial pairing, then gets out of the way.",
+      desc: "WebRTC connects your laptop and phone directly. The signaling server only facilitates the initial key exchange, then gets out of the way.",
       icon: "🌐"
     },
     { 
@@ -211,12 +209,11 @@ function WhyChoose() {
         </p>
         <div className="landing-grid" style={t.grid3}>
           {benefits.map((item) => (
-            <div key={item.title} style={{ 
+            <div key={item.title} className="card-hover" style={{ 
               background: "#0f0f0f", 
               border: "1px solid #1a1a1a", 
               borderRadius: 12, 
               padding: 28,
-              transition: "all 0.2s"
             }}>
               <div style={{ fontSize: 32, marginBottom: 14 }}>{item.icon}</div>
               <h3 style={t.h3}>{item.title}</h3>
@@ -261,12 +258,11 @@ function Features() {
         <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>Everything you need for secure remote laptop access</p>
         <div className="landing-grid" style={t.grid3}>
           {items.map((item) => (
-            <div key={item.title} style={{ 
+            <div key={item.title} className="card-hover" style={{ 
               background: "#0f0f0f", 
               border: "1px solid #1a1a1a", 
               borderRadius: 12, 
               padding: 28,
-              transition: "all 0.2s"
             }}>
               <IconBox>{item.icon}</IconBox>
               <h3 style={t.h3}>{item.title}</h3>
@@ -293,7 +289,7 @@ function HowItWorks() {
         <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>Get connected in three simple steps</p>
         <div className="landing-grid" style={t.grid3}>
           {steps.map((s) => (
-            <div key={s.num} style={{ textAlign: "center", padding: 32 }}>
+            <div key={s.num} className="card-hover" style={{ textAlign: "center", padding: 32, borderRadius: 12 }}>
               <div style={{ fontSize: 48, fontWeight: 800, color: "#4ade80", opacity: 0.2, marginBottom: 16 }}>{s.num}</div>
               <h3 style={t.h3}>{s.title}</h3>
               <p style={{ ...t.p, fontSize: 14, margin: "10px auto 0" }}>{s.desc}</p>
@@ -307,17 +303,15 @@ function HowItWorks() {
 
 function CliDemo() {
   const output = [
-    "$ npm install -g tetherdesk",
-    "→ Installing tetherdesk...",
-    "✓ Installation complete",
+    "$ npx tetherdesk start",
     "",
-    "$ tetherdesk start",
-    "→ Starting server...",
-    "→ Creating tunnel...",
-    "✓ Server running on http://localhost:3000",
-    "✓ Tunnel ready: https://xxx.trycloudflare.com",
+    " TetherDesk is running!",
     "",
-    "  Scan QR code to connect — 30s setup",
+    "  1. Open the dashboard:  http://localhost:3000",
+    "  2. Scan the QR code on your phone",
+    "  3. Tap Allow on this laptop to approve the connection",
+    "",
+    "  Press Ctrl+C to stop all processes.",
   ];
 
   return (
@@ -334,15 +328,19 @@ function CliDemo() {
               <span style={{ color: "#555", fontSize: 12, marginLeft: 8 }}>terminal</span>
             </div>
             <div style={{ padding: "16px 20px", ...t.mono, fontSize: 13, lineHeight: 1.7 }}>
-              {output.map((l, i) => (
-                <div key={i} style={{ color: l.startsWith("$") ? "#888" : l.startsWith("✓") ? "#4ade80" : l.startsWith("→") ? "#888" : "#ccc", whiteSpace: "pre-wrap" }}>
-                  {l}
-                </div>
-              ))}
+              {output.map((l, i) => {
+                const isGreen = l === " TetherDesk is running!";
+                const isDim = l.startsWith("$") || l.startsWith("  ");
+                return (
+                  <div key={i} style={{ color: isGreen ? "#4ade80" : isDim ? "#888" : "#ccc", whiteSpace: "pre-wrap" }}>
+                    {l}
+                  </div>
+                );
+              })}
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 32, flexWrap: "wrap" }}>
-            {["30s Setup", "0 Configuration", "∞ Possibilities"].map((s) => (
+            {["Single Command", "30s Setup", "Open Source"].map((s) => (
               <span key={s} style={{ fontSize: 13, color: "#4ade80" }}>{s}</span>
             ))}
           </div>
@@ -350,8 +348,8 @@ function CliDemo() {
             Free. Open source. Ready in 30 seconds.
           </p>
           <div style={{ ...t.flexCenter, gap: 12, marginTop: 24, flexWrap: "wrap" }}>
-            <Link href="/access" style={{ ...t.btn, ...t.btnPrimary }}>Get Remote</Link>
-            <a href="https://github.com/wi5nuu/Tetherdesk" style={{ ...t.btn, ...t.btnOutline }} target="_blank" rel="noopener noreferrer">GitHub</a>
+            <Link href="/access" className="btn-primary" style={{ ...t.btn, ...t.btnPrimary }}>Get Remote</Link>
+            <a href="https://github.com/wi5nuu/Tetherdesk" className="btn-secondary" style={{ ...t.btn, ...t.btnOutline }} target="_blank" rel="noopener noreferrer">GitHub</a>
           </div>
           <p style={{ ...t.center, fontSize: 12, color: "#555", marginTop: 16 }}>No credit card required · Open source · MIT License</p>
         </div>
@@ -361,7 +359,7 @@ function CliDemo() {
 }
 
 function Footer() {
-  const fl = (color = "#666") => ({ color, textDecoration: "none", cursor: "pointer", fontSize: 13, lineHeight: 2 });
+  const fl = (color = "#666") => ({ color, textDecoration: "none", cursor: "pointer", fontSize: 13, lineHeight: 2 } as React.CSSProperties);
 
   return (
     <footer style={{ borderTop: "1px solid #141414", padding: "48px 0 32px" }}>
@@ -376,26 +374,26 @@ function Footer() {
             <div>
               <p style={{ fontSize: 12, color: "#888", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Product</p>
               <div style={{ display: "flex", flexDirection: "column" }}>
-                <Link href="/access" style={fl()}>Remote</Link>
-                <Link href="/access" style={fl()}>Terminal</Link>
-                <Link href="/dashboard" style={fl()}>Remote Desktop</Link>
+                <Link href="/access" className="link-hover" style={fl()}>Remote</Link>
+                <Link href="/access" className="link-hover" style={fl()}>Terminal</Link>
+                <Link href="/dashboard" className="link-hover" style={fl()}>Remote Desktop</Link>
               </div>
             </div>
             <div>
               <p style={{ fontSize: 12, color: "#888", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Resources</p>
               <div style={{ display: "flex", flexDirection: "column" }}>
-                <a href="https://github.com/wi5nuu/Tetherdesk" style={fl()} target="_blank" rel="noopener noreferrer">GitHub</a>
-                <Link href="/docs" style={fl()}>Documentation</Link>
-                <a href="https://github.com/wi5nuu/Tetherdesk/discussions" style={fl()} target="_blank" rel="noopener noreferrer">Community</a>
+                <a href="https://github.com/wi5nuu/Tetherdesk" className="link-hover" style={fl()} target="_blank" rel="noopener noreferrer">GitHub</a>
+                <Link href="/docs" className="link-hover" style={fl()}>Documentation</Link>
+                <a href="https://github.com/wi5nuu/Tetherdesk/discussions" className="link-hover" style={fl()} target="_blank" rel="noopener noreferrer">Community</a>
               </div>
             </div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 32, paddingTop: 24, borderTop: "1px solid #141414", flexWrap: "wrap", fontSize: 12, color: "#444" }}>
-          <span>Built with Next.js, WebRTC, and Cloudflare</span>
+          <span>Built with Next.js, WebRTC, and Redis</span>
           <div style={{ display: "flex", gap: 16, marginLeft: "auto" }}>
-            <a href="https://github.com/wi5nuu/Tetherdesk" style={fl("#555")} target="_blank" rel="noopener noreferrer">GitHub</a>
-            <Link href="/docs" style={fl("#555")}>Docs</Link>
+            <a href="https://github.com/wi5nuu/Tetherdesk" className="link-hover" style={fl("#555")} target="_blank" rel="noopener noreferrer">GitHub</a>
+            <Link href="/docs" className="link-hover" style={fl("#555")}>Docs</Link>
           </div>
         </div>
       </div>
