@@ -47,10 +47,10 @@ function keyLabel(key: string): string {
 // Body: { sessionId?: string }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  // Auth is optional for POST — the dashboard UI generates keys without a session JWT.
+  // If a valid JWT is present we bind the key to that session; otherwise we accept a
+  // sessionId in the body (agent secret path) or create a fresh anonymous session.
   const auth = await authenticateRequest(request);
-  if (!auth.ok && !verifyAgentSecret(request)) {
-    return jsonError(ErrorCode.UNAUTHORIZED, "authentication required");
-  }
 
   const body = await parseBody(request);
   const redis = getRedis();
