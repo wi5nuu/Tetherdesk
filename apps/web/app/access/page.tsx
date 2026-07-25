@@ -148,22 +148,31 @@ export default function AccessPage() {
         <div style={s.setup}>
           <div style={{ fontWeight: 600, color: "#888", marginBottom: 12 }}>How to get a key</div>
 
-          <div style={{ fontWeight: 500, fontSize: 12, color: "#888" }}>Option A: Persistent API Key</div>
+          <div style={{ fontWeight: 500, fontSize: 12, color: "#888" }}>Option A: One-Time Key (recommended)</div>
           <div style={s.setupStep}>
-            Open{" "}
-            <Link href="/dashboard" className="link-hover" style={{ color: "#4ade80", textDecoration: "none" }}>
-              dashboard
-            </Link>{" "}
-            on your laptop, click <strong style={{ color: "#888" }}>Generate Key</strong>, then enter the <strong style={{ color: "#888" }}>sk-xxx</strong> key here.
-          </div>
-
-          <div style={{ fontWeight: 500, fontSize: 12, color: "#888", marginTop: 16 }}>Option B: One-Time Key</div>
-          <div style={s.setupStep}>
-            Run this on your computer:
+            1. Run on your laptop:
           </div>
           <div style={s.setupCode}>npx tetherdesk start</div>
           <div style={s.setupStep}>
-            A <strong style={{ color: "#888" }}>TD-XXXXXX</strong> key appears in the terminal. Enter it here.
+            2. A <strong style={{ color: "#e0e0e0" }}>TD-XXXXXX</strong> key appears in the terminal. Enter it here.
+          </div>
+          <div style={s.setupStep}>
+            3. Point your phone camera at the QR code shown after connecting.
+          </div>
+
+          <div style={{ fontWeight: 500, fontSize: 12, color: "#888", marginTop: 16 }}>Option B: Persistent API Key</div>
+          <div style={s.setupStep}>
+            1. Run <code style={{ color: "#4ade80", fontSize: 11 }}>npx tetherdesk start</code> on your laptop first.
+          </div>
+          <div style={s.setupStep}>
+            2. Open{" "}
+            <Link href="/dashboard" className="link-hover" style={{ color: "#4ade80", textDecoration: "none" }}>
+              dashboard
+            </Link>{" "}
+            → click <strong style={{ color: "#e0e0e0" }}>Generate Key</strong> → copy the <strong style={{ color: "#e0e0e0" }}>sk-xxx</strong> key.
+          </div>
+          <div style={s.setupStep}>
+            3. Enter the key here, then scan the QR code on your laptop screen.
           </div>
         </div>
 
