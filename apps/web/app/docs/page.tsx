@@ -1,64 +1,79 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 const s: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100dvh", background: "#0a0a0a", color: "#e0e0e0",
     fontFamily: '"Calibri", "Segoe UI", Tahoma, Geneva, sans-serif',
   },
-  wrap: { maxWidth: 820, margin: "0 auto", padding: "0 24px" },
+  container: { display: "flex", maxWidth: 1200, margin: "0 auto", padding: "0 24px", gap: 40, position: "relative" as const },
+  sidebar: {
+    width: 240, flexShrink: 0, position: "sticky" as const, top: 80, height: "fit-content",
+    background: "#0d0d0d", border: "1px solid #1f1f1f", borderRadius: 10, padding: "20px 0",
+  },
+  sidebarTitle: { fontSize: 12, fontWeight: 700, color: "#666", textTransform: "uppercase" as const, letterSpacing: "0.1em", padding: "0 20px", marginBottom: 12 },
+  tocItem: { 
+    color: "#888", textDecoration: "none", display: "block", padding: "6px 20px", 
+    fontSize: 13, cursor: "pointer", transition: "all 0.2s", borderLeft: "2px solid transparent"
+  },
+  tocItemActive: { color: "#4ade80", borderLeft: "2px solid #4ade80", background: "#0a1a0f" },
+  main: { flex: 1, minWidth: 0 },
+  wrap: { maxWidth: 820 },
   header: {
-    borderBottom: "1px solid #141414", padding: "16px 0",
+    borderBottom: "1px solid #141414", padding: "16px 0", marginBottom: 40,
     display: "flex", alignItems: "center", justifyContent: "space-between",
   },
   logo: { fontWeight: 700, fontSize: 18, color: "#4ade80", textDecoration: "none" },
   nav: { display: "flex", gap: 20, fontSize: 14, color: "#888" },
   navLink: { color: "#888", textDecoration: "none", cursor: "pointer" },
-  hero: { padding: "64px 0 40px", textAlign: "center" as const },
-  h1: { fontSize: "clamp(28px, 5vw, 42px)", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 12 },
-  sub: { fontSize: 15, color: "#888", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 },
-  section: { padding: "32px 0", borderTop: "1px solid #141414" },
-  h2: { fontSize: 22, fontWeight: 700, marginBottom: 16, color: "#f0f0f0" },
-  h3: { fontSize: 17, fontWeight: 600, marginBottom: 10, color: "#e0e0e0", marginTop: 28 },
-  h4: { fontSize: 14, fontWeight: 600, marginBottom: 6, color: "#ccc", marginTop: 20 },
-  p: { fontSize: 14, lineHeight: 1.7, color: "#999", marginBottom: 12 },
+  hero: { padding: "40px 0", textAlign: "center" as const },
+  h1: { fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 16, lineHeight: 1.1 },
+  sub: { fontSize: 16, color: "#999", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 },
+  section: { padding: "48px 0", borderTop: "1px solid #141414" },
+  h2: { fontSize: 28, fontWeight: 700, marginBottom: 20, color: "#f0f0f0", letterSpacing: "-0.02em" },
+  h3: { fontSize: 20, fontWeight: 600, marginBottom: 12, color: "#e0e0e0", marginTop: 32 },
+  h4: { fontSize: 16, fontWeight: 600, marginBottom: 8, color: "#ccc", marginTop: 24 },
+  p: { fontSize: 15, lineHeight: 1.8, color: "#aaa", marginBottom: 16 },
   code: {
     fontFamily: '"SF Mono", "Fira Code", "Roboto Mono", monospace',
     fontSize: 13, background: "#111", border: "1px solid #222",
     borderRadius: 6, padding: "2px 8px", color: "#4ade80",
   },
+  codeBlockWrapper: { position: "relative" as const, marginBottom: 24 },
   codeBlock: {
     fontFamily: '"SF Mono", "Fira Code", "Roboto Mono", monospace',
     fontSize: 13, background: "#0d0d0d", border: "1px solid #1f1f1f",
-    borderRadius: 8, padding: "16px 20px", color: "#ccc",
-    lineHeight: 1.7, margin: "12px 0 20px", whiteSpace: "pre-wrap" as const,
+    borderRadius: 8, padding: "20px 24px", color: "#ccc",
+    lineHeight: 1.8, whiteSpace: "pre-wrap" as const,
     overflowX: "auto" as const,
   },
-  ul: { paddingLeft: 20, marginBottom: 16, color: "#999", lineHeight: 1.9, fontSize: 14 },
+  copyBtn: {
+    position: "absolute" as const, top: 12, right: 12,
+    background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6,
+    padding: "6px 12px", fontSize: 12, color: "#888", cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  copyBtnCopied: { background: "#166534", color: "#4ade80", borderColor: "#4ade80" },
+  ul: { paddingLeft: 24, marginBottom: 20, color: "#aaa", lineHeight: 2, fontSize: 15 },
   card: {
     background: "#111", border: "1px solid #1f1f1f", borderRadius: 10,
-    padding: "20px 24px", marginBottom: 16,
+    padding: "24px 28px", marginBottom: 20,
   },
-  cardTitle: { fontSize: 14, fontWeight: 600, color: "#4ade80", marginBottom: 6 },
-  cardDesc: { fontSize: 13, color: "#888", lineHeight: 1.6 },
-  grid2: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 20 },
+  cardTitle: { fontSize: 15, fontWeight: 600, color: "#4ade80", marginBottom: 8 },
+  cardDesc: { fontSize: 14, color: "#999", lineHeight: 1.7 },
+  grid2: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20, marginBottom: 24 },
   note: {
     background: "#0a1a0f", border: "1px solid #166534", borderRadius: 8,
-    padding: "14px 18px", fontSize: 13, color: "#4ade80", lineHeight: 1.6, marginBottom: 20,
+    padding: "16px 20px", fontSize: 14, color: "#4ade80", lineHeight: 1.7, marginBottom: 24,
   },
   warning: {
     background: "#1a1000", border: "1px solid #664400", borderRadius: 8,
-    padding: "14px 18px", fontSize: 13, color: "#fbbf24", lineHeight: 1.6, marginBottom: 20,
+    padding: "16px 20px", fontSize: 14, color: "#fbbf24", lineHeight: 1.7, marginBottom: 24,
   },
-  toc: {
-    background: "#0d0d0d", border: "1px solid #1f1f1f", borderRadius: 10,
-    padding: "20px 24px", marginBottom: 32,
-  },
-  tocItem: { color: "#888", textDecoration: "none", display: "block", padding: "4px 0", fontSize: 14, cursor: "pointer", lineHeight: 1.8 },
-  tocItemH: { color: "#4ade80" },
   footer: {
-    borderTop: "1px solid #141414", padding: "32px 0", marginTop: 48,
+    borderTop: "1px solid #141414", padding: "40px 0", marginTop: 60,
     textAlign: "center" as const, fontSize: 13, color: "#555",
   },
 };
@@ -80,7 +95,29 @@ function Code({ children }: { children: string }) {
 }
 
 function CodeBlock({ children }: { children: string }) {
-  return <div style={s.codeBlock}>{children}</div>;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        typeof children === "string" ? children.replace(/\$ /g, "").replace(/\nOutput:[\s\S]*$/, "").trim() : ""
+      );
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* fallback */ }
+  };
+
+  return (
+    <div style={s.codeBlockWrapper}>
+      <button
+        style={{ ...s.copyBtn, ...(copied ? s.copyBtnCopied : {}) }}
+        onClick={handleCopy}
+      >
+        {copied ? "Copied!" : "Copy"}
+      </button>
+      <div style={s.codeBlock}>{children}</div>
+    </div>
+  );
 }
 
 function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
@@ -88,37 +125,70 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
 }
 
 export default function DocsPage() {
+  const [activeId, setActiveId] = useState<string>("quickstart");
+
+  // IntersectionObserver for active section tracking
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveId(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: "-80px 0px -60% 0px" }
+    );
+    for (const { id } of TOC_ITEMS) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div style={s.page}>
-      <div style={s.wrap}>
-        <header style={s.header}>
-          <Link href="/" style={s.logo}>TetherDesk</Link>
-          <div style={s.nav}>
-            <NavLink href="/">Home</NavLink>
-            <NavLink href="/access">Access</NavLink>
-            <NavLink href="/dashboard">Dashboard</NavLink>
-          </div>
-        </header>
-
-        <div style={s.hero}>
-          <h1 style={s.h1}>Documentation</h1>
-          <p style={s.sub}>
-            Everything you need to know about TetherDesk — from first-time setup to advanced usage.
-          </p>
+      <header style={{ ...s.header, maxWidth: 1200, margin: "0 auto", padding: "16px 24px", marginBottom: 0, borderBottom: "1px solid #141414" }}>
+        <Link href="/" style={s.logo}>TetherDesk</Link>
+        <div style={s.nav}>
+          <NavLink href="/">Home</NavLink>
+          <NavLink href="/access">Access</NavLink>
+          <NavLink href="/dashboard">Dashboard</NavLink>
         </div>
+      </header>
 
-        {/* Table of Contents */}
-        <div style={s.toc}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#888", marginBottom: 12 }}>On this page</div>
+      <div style={s.hero}>
+        <h1 style={s.h1}>Documentation</h1>
+        <p style={s.sub}>
+          Everything you need to know about TetherDesk — from first-time setup to advanced usage.
+        </p>
+      </div>
+
+      <div className="docs-wrap" style={s.container}>
+
+        {/* Sticky Table of Contents Sidebar */}
+        <div className="docs-sidebar" style={s.sidebar}>
+          <div style={s.sidebarTitle}>On this page</div>
           {TOC_ITEMS.map((item) => (
-            <a key={item.id} href={`#${item.id}`} style={s.tocItem}>
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              style={{ ...s.tocItem, ...(activeId === item.id ? s.tocItemActive : {}) }}
+              onClick={(e) => {
+                e.preventDefault();
+                const el = document.getElementById(item.id);
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
               {item.label}
             </a>
           ))}
         </div>
 
-        {/* Quick Start */}
-        <section id="quickstart" style={s.section}>
+        {/* Main content */}
+        <div style={s.main}>
+          <div className="docs-wrap" style={s.wrap}>
+          <section id="quickstart" style={s.section}>
           <h2 style={s.h2}>Quick Start — 30 seconds</h2>
           <div style={s.note}>
             No account, no credit card, no port forwarding. Works on any laptop with Node.js 20+.
@@ -506,5 +576,7 @@ tetherdesk config backendUrl https://example.com  # set backend URL`}</CodeBlock
         </div>
       </div>
     </div>
+  </div>
+</div>
   );
 }
