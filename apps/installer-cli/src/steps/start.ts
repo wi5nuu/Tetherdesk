@@ -238,10 +238,35 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
 
   // ── Print instructions ────────────────────────────────────────────────────
   console.log(pc.bold(pc.green("\n TetherDesk is running!\n")));
-  console.log(pc.cyan("  1. Open the dashboard:  ") + pc.bold(`${tunnelUrl}`));
+  console.log(pc.cyan("  1. Open the dashboard:  ") + pc.bold(`${tunnelUrl}/dashboard`));
   console.log(pc.cyan("  2. Scan the QR code on your phone"));
   console.log(pc.cyan("  3. Tap Allow on this laptop to approve the connection"));
   console.log(pc.dim("\n  Press Ctrl+C to stop all processes.\n"));
+
+  // ── Fetch and print one-time pairing key ──────────────────────────────────
+  // Poll /api/pairing/active-qr until agent registers a QR (max 30s)
+  const printPairingKey = async () => {
+    const maxAttempts = 15;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise<void>((r) => setTimeout(r, 2_000));
+      try {
+        const resp = await fetch(`http://localhost:3000/api/pairing/active-qr`, { signal: AbortSignal.timeout(5_000) });
+        if (!resp.ok) continue;
+        const json = await resp.json() as { ok: boolean; data?: { pairingUrl: string } };
+        if (!json.ok || !json.data?.pairingUrl) continue;
+        // Extract token from URL: /pair/<token>
+        const match = json.data.pairingUrl.match(/\/pair\/([A-Za-z0-9_-]+)/);
+        if (!match) continue;
+        const token = match[1];
+        console.log(pc.bold(pc.yellow("\n  One-time access key:")));
+        console.log(pc.bold(pc.green(`  TD-${token}`)));
+        console.log(pc.dim("  Enter this key on your phone at: ") + pc.bold(`${tunnelUrl}/access`));
+        console.log(pc.dim("  (Key expires in 90 seconds)\n"));
+        return;
+      } catch { /* keep polling */ }
+    }
+  };
+  void printPairingKey();
 
   await new Promise<void>(() => {
     // intentionally never resolves; cleanup() handles exit
