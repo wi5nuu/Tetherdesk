@@ -110,9 +110,9 @@ function Hero() {
         <p style={{ ...t.p, margin: "0 auto 40px", fontSize: "clamp(15px, 2.5vw, 18px)", maxWidth: 520 }}>
           Zero-config remote desktop. Scan QR, tap to control. End-to-end encrypted P2P connection via WebRTC.
         </p>
-        <div className="landing-buttons" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
-          <Link href="/access" className="btn-primary" style={{ ...t.btn, ...t.btnPrimary, fontSize: 16, padding: "14px 36px" }}>Start Pairing</Link>
-          <Link href="/dashboard" className="btn-secondary" style={{ ...t.btn, ...t.btnOutline, fontSize: 16, padding: "14px 36px" }}>Dashboard</Link>
+        <div className="landing-buttons" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <Link href="/access" className="btn-primary" style={{ ...t.btn, ...t.btnPrimary, fontSize: "clamp(13px, 3.5vw, 16px)", padding: "12px clamp(16px, 4vw, 36px)", whiteSpace: "nowrap" }}>Start Pairing</Link>
+          <Link href="/dashboard" className="btn-secondary" style={{ ...t.btn, ...t.btnOutline, fontSize: "clamp(13px, 3.5vw, 16px)", padding: "12px clamp(16px, 4vw, 36px)", whiteSpace: "nowrap" }}>Dashboard</Link>
         </div>
       </div>
     </section>
@@ -339,9 +339,9 @@ function CliDemo() {
           <p style={{ ...t.center, fontSize: 13, color: "#555", marginTop: 24 }}>
             Free. Open source. Ready in 30 seconds.
           </p>
-          <div style={{ ...t.flexCenter, gap: 12, marginTop: 24, flexWrap: "wrap" }}>
-            <Link href="/access" className="btn-primary" style={{ ...t.btn, ...t.btnPrimary }}>Get Remote</Link>
-            <a href="https://github.com/wi5nuu/Tetherdesk" className="btn-secondary" style={{ ...t.btn, ...t.btnOutline }} target="_blank" rel="noopener noreferrer">GitHub</a>
+          <div style={{ ...t.flexCenter, gap: 10, marginTop: 24 }}>
+            <Link href="/access" className="btn-primary" style={{ ...t.btn, ...t.btnPrimary, whiteSpace: "nowrap", fontSize: "clamp(13px, 3.5vw, 15px)", padding: "12px clamp(16px, 4vw, 28px)" }}>Get Remote</Link>
+            <a href="https://github.com/wi5nuu/Tetherdesk" className="btn-secondary" style={{ ...t.btn, ...t.btnOutline, whiteSpace: "nowrap", fontSize: "clamp(13px, 3.5vw, 15px)", padding: "12px clamp(16px, 4vw, 28px)" }} target="_blank" rel="noopener noreferrer">GitHub</a>
           </div>
           <p style={{ ...t.center, fontSize: 12, color: "#555", marginTop: 16 }}>No credit card required · Open source · MIT License</p>
         </div>
