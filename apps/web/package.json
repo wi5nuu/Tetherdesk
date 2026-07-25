@@ -11,7 +11,7 @@
     "lint": "eslint app lib",
     "test": "vitest run --config vitest.config.ts",
     "test:coverage": "vitest run --config vitest.config.ts --coverage",
-    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
     "redis:up": "docker compose -f docker-compose.test.yml up -d",
     "redis:down": "docker compose -f docker-compose.test.yml down -v",
     "demo:handshake": "tsx scripts/pairing-handshake-demo.ts"
