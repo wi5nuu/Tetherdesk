@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useRef, useState, useCallback } from "react";
 import { generateX25519KeyPair, toBase64Url } from "@tetherdesk/crypto";
 import { useToast } from "../../lib/toast";
