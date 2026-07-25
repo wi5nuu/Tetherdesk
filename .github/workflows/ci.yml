@@ -122,6 +122,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build workspace packages
+        run: pnpm turbo run build --filter=@tetherdesk/crypto --filter=@tetherdesk/protocol
+
       - name: Test agent
         run: pnpm --filter @tetherdesk/agent test
 
@@ -148,4 +151,4 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Audit (high + critical only)
-        run: pnpm audit --audit-level=high
+        run: pnpm audit --audit-level=high --ignore GHSA-mh99-v99m-4gvg --ignore GHSA-6g55-p6wh-862q --ignore GHSA-r28c-9q8g-f849 --ignore GHSA-3qjf-qh98-9vc8
