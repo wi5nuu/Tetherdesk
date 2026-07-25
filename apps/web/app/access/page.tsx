@@ -146,33 +146,43 @@ export default function AccessPage() {
         </form>
 
         <div style={s.setup}>
-          <div style={{ fontWeight: 600, color: "#888", marginBottom: 12 }}>How to get a key</div>
+          <div style={{ fontWeight: 600, color: "#e0e0e0", marginBottom: 16 }}>Before you connect</div>
 
-          <div style={{ fontWeight: 500, fontSize: 12, color: "#888" }}>Option A: One-Time Key (recommended)</div>
-          <div style={s.setupStep}>
-            1. Run on your laptop:
-          </div>
-          <div style={s.setupCode}>npx tetherdesk start</div>
-          <div style={s.setupStep}>
-            2. A <strong style={{ color: "#e0e0e0" }}>TD-XXXXXX</strong> key appears in the terminal. Enter it here.
-          </div>
-          <div style={s.setupStep}>
-            3. Point your phone camera at the QR code shown after connecting.
-          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* Step 1 */}
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <span style={{ background: "#4ade80", color: "#0a0a0a", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>1</span>
+              <div>
+                <div style={{ fontSize: 13, color: "#e0e0e0", fontWeight: 500, marginBottom: 4 }}>Run the agent on your laptop</div>
+                <div style={s.setupCode}>npx tetherdesk start</div>
+                <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>This starts the agent and generates a pairing QR code in the dashboard.</div>
+              </div>
+            </div>
 
-          <div style={{ fontWeight: 500, fontSize: 12, color: "#888", marginTop: 16 }}>Option B: Persistent API Key</div>
-          <div style={s.setupStep}>
-            1. Run <code style={{ color: "#4ade80", fontSize: 11 }}>npx tetherdesk start</code> on your laptop first.
-          </div>
-          <div style={s.setupStep}>
-            2. Open{" "}
-            <Link href="/dashboard" className="link-hover" style={{ color: "#4ade80", textDecoration: "none" }}>
-              dashboard
-            </Link>{" "}
-            → click <strong style={{ color: "#e0e0e0" }}>Generate Key</strong> → copy the <strong style={{ color: "#e0e0e0" }}>sk-xxx</strong> key.
-          </div>
-          <div style={s.setupStep}>
-            3. Enter the key here, then scan the QR code on your laptop screen.
+            {/* Step 2 — Option A */}
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <span style={{ background: "#1a1a1a", color: "#4ade80", border: "1px solid #2a2a2a", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>2</span>
+              <div>
+                <div style={{ fontSize: 13, color: "#e0e0e0", fontWeight: 500, marginBottom: 2 }}>Get your access key — choose one:</div>
+                <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>
+                  <strong style={{ color: "#888" }}>Option A (one-time):</strong> A <code style={{ color: "#4ade80", fontSize: 11, background: "#111", padding: "1px 5px", borderRadius: 3 }}>TD-XXXXXX</code> key appears in the terminal after starting. Enter it above.
+                </div>
+                <div style={{ fontSize: 12, color: "#666" }}>
+                  <strong style={{ color: "#888" }}>Option B (persistent):</strong> Open the{" "}
+                  <Link href="/dashboard" className="link-hover" style={{ color: "#4ade80", textDecoration: "none" }}>dashboard</Link>
+                  {" "}→ click <strong style={{ color: "#888" }}>Generate Key</strong> → copy the <code style={{ color: "#4ade80", fontSize: 11, background: "#111", padding: "1px 5px", borderRadius: 3 }}>sk-xxx</code> key.
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <span style={{ background: "#1a1a1a", color: "#4ade80", border: "1px solid #2a2a2a", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>3</span>
+              <div>
+                <div style={{ fontSize: 13, color: "#e0e0e0", fontWeight: 500, marginBottom: 2 }}>Enter the key above and tap Connect</div>
+                <div style={{ fontSize: 12, color: "#555" }}>Your phone camera will open. Point it at the QR code shown on your laptop dashboard to complete the connection.</div>
+              </div>
+            </div>
           </div>
         </div>
 

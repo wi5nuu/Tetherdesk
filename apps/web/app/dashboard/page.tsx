@@ -708,35 +708,33 @@ export default function HomePage() {
               <li style={s.step}>
                 <div style={s.stepNum}>1</div>
                 <div>
-                  <div style={s.stepTitle}>Start the agent on this laptop</div>
-                  <code style={s.codeChip}>
-                    pnpm --filter @tetherdesk/agent dev
-                  </code>
+                  <div style={s.stepTitle}>Run the agent on this laptop</div>
+                  <div style={s.stepHint}>Open a terminal and run:</div>
+                  <code style={s.codeChip}>npx tetherdesk start</code>
+                  <div style={s.stepHint}>The agent starts and this QR code activates automatically.</div>
                 </div>
               </li>
               <li style={s.step}>
                 <div style={s.stepNum}>2</div>
                 <div>
-                  <div style={s.stepTitle}>Open your phone camera</div>
-                  <div style={s.stepHint}>Point at the QR code on the left</div>
+                  <div style={s.stepTitle}>Scan the QR code with your phone</div>
+                  <div style={s.stepHint}>Open your phone camera and point it at the QR code on the left. Your phone browser will open automatically.</div>
                 </div>
               </li>
               <li style={s.step}>
                 <div style={s.stepNum}>3</div>
                 <div>
-                  <div style={s.stepTitle}>Tap Allow on this screen</div>
+                  <div style={s.stepTitle}>Tap Allow on this laptop screen</div>
                   <div style={s.stepHint}>
-                    An approval dialog will appear here
+                    An approval dialog will appear here. Tap <strong style={{ color: "#4ade80" }}>Allow</strong> to confirm the connection from your phone.
                   </div>
                 </div>
               </li>
               <li style={s.step}>
                 <div style={s.stepNum}>4</div>
                 <div>
-                  <div style={s.stepTitle}>
-                    Your laptop screen appears on the phone
-                  </div>
-                  <div style={s.stepHint}>Full remote control is now active</div>
+                  <div style={s.stepTitle}>Control your laptop from your phone</div>
+                  <div style={s.stepHint}>Your laptop screen streams to your phone. Tap to click, swipe to scroll — full remote control is now active.</div>
                 </div>
               </li>
             </ol>
