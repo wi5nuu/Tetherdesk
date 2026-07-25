@@ -60,7 +60,7 @@ function Navbar() {
       background: "rgba(10,10,10,0.85)", backdropFilter: "blur(12px)",
       borderBottom: "1px solid #141414",
     }}>
-      <div style={{ ...t.wrap, display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
+      <div className="landing-wrap" style={{ ...t.wrap, display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontWeight: 700, fontSize: 18, color: "#4ade80" }}>TetherDesk</span>
           <span style={{ fontSize: 11, color: "#555", padding: "2px 6px", border: "1px solid #222", borderRadius: 4 }}>v{APP_VERSION}</span>
@@ -89,7 +89,7 @@ function Navbar() {
 
 function Hero() {
   return (
-    <section style={{
+    <section className="landing-section" style={{
       ...t.section, paddingTop: 100, paddingBottom: 60,
       textAlign: "center" as const, position: "relative" as const, overflow: "hidden" as const,
     }}>
@@ -99,12 +99,12 @@ function Hero() {
         background: "radial-gradient(circle, rgba(74,222,128,0.06) 0%, transparent 70%)",
         pointerEvents: "none",
       }} />
-      <div style={{ ...t.wrap, position: "relative" as const }}>
+      <div className="landing-wrap" style={{ ...t.wrap, position: "relative" as const }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#111", border: "1px solid #1f1f1f", borderRadius: 20, padding: "4px 14px 4px 4px", marginBottom: 32, fontSize: 12 }}>
           <span style={{ background: "#4ade80", color: "#0a0a0a", borderRadius: 20, padding: "2px 10px", fontWeight: 600 }}>OPEN SOURCE</span>
           <span style={{ color: "#888" }}>Free & Self-Hosted</span>
         </div>
-        <h1 style={{ fontSize: "clamp(36px, 8vw, 64px)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", marginBottom: 20 }}>
+        <h1 className="landing-hero-title" style={{ fontSize: "clamp(36px, 8vw, 64px)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", marginBottom: 20 }}>
           <div>Control your laptop</div>
           <div>from your phone.</div>
           <div>Anywhere.</div>
@@ -112,7 +112,7 @@ function Hero() {
         <p style={{ ...t.p, margin: "0 auto 40px", fontSize: "clamp(15px, 2.5vw, 18px)", maxWidth: 520 }}>
           Zero-config remote desktop. Scan QR, tap to control. End-to-end encrypted P2P connection via WebRTC.
         </p>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
+        <div className="landing-buttons" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
           <Link href="/access" style={{ ...t.btn, ...t.btnPrimary, fontSize: 16, padding: "14px 36px" }}>Start Pairing</Link>
           <Link href="/dashboard" style={{ ...t.btn, ...t.btnOutline, fontSize: 16, padding: "14px 36px" }}>Dashboard</Link>
         </div>
@@ -136,7 +136,7 @@ function TerminalDemo() {
 
   return (
     <section style={{ ...t.section, paddingTop: 0 }}>
-      <div style={{ ...t.wrap, maxWidth: 640 }}>
+      <div className="landing-wrap" style={{ ...t.wrap, maxWidth: 640 }}>
         <div className="landing-terminal">
           <div className="landing-terminal-bar">
             <div className="landing-terminal-dot" style={{ background: "#f87171" }} />
@@ -203,13 +203,13 @@ function WhyChoose() {
   ];
 
   return (
-    <section id="why" style={t.sectionAlt}>
+    <section id="why" className="landing-section" style={t.sectionAlt}>
       <div style={t.wrap}>
         <h2 style={{ ...t.h2, ...t.center }}>Why TetherDesk?</h2>
         <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>
           Built for developers who want secure remote access without the complexity
         </p>
-        <div style={t.grid3}>
+        <div className="landing-grid" style={t.grid3}>
           {benefits.map((item) => (
             <div key={item.title} style={{ 
               background: "#0f0f0f", 
@@ -255,11 +255,11 @@ function Features() {
   ];
 
   return (
-    <section style={t.sectionAlt}>
+    <section className="landing-section" style={t.sectionAlt}>
       <div style={t.wrap}>
         <h2 style={{ ...t.h2, ...t.center }}>Core Features</h2>
         <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>Everything you need for secure remote laptop access</p>
-        <div style={t.grid3}>
+        <div className="landing-grid" style={t.grid3}>
           {items.map((item) => (
             <div key={item.title} style={{ 
               background: "#0f0f0f", 
@@ -287,11 +287,11 @@ function HowItWorks() {
   ];
 
   return (
-    <section id="how-it-works" style={t.sectionAlt}>
+    <section id="how-it-works" className="landing-section" style={t.sectionAlt}>
       <div style={t.wrap}>
         <h2 style={{ ...t.h2, ...t.center }}>How It Works</h2>
         <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>Get connected in three simple steps</p>
-        <div style={t.grid3}>
+        <div className="landing-grid" style={t.grid3}>
           {steps.map((s) => (
             <div key={s.num} style={{ textAlign: "center", padding: 32 }}>
               <div style={{ fontSize: 48, fontWeight: 800, color: "#4ade80", opacity: 0.2, marginBottom: 16 }}>{s.num}</div>
@@ -366,7 +366,7 @@ function Footer() {
   return (
     <footer style={{ borderTop: "1px solid #141414", padding: "48px 0 32px" }}>
       <div style={t.wrap}>
-        <div style={t.grid2}>
+        <div className="landing-grid" style={t.grid2}>
           <div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "#4ade80" }}>TetherDesk</span>
             <p style={{ ...t.p, fontSize: 13, marginTop: 8 }}>Secure remote terminal and desktop access. Connect to your machines from anywhere in the world.</p>

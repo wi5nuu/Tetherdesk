@@ -368,25 +368,23 @@ export default function HomePage() {
 
       {/* Mobile hamburger menu */}
       <button
-        style={s.hamburger}
+        className="dashboard-hamburger"
         onClick={() => setSidebarOpen(!sidebarOpen)}
         aria-label="Toggle navigation menu"
       >
-        <span style={s.hamburgerLine}></span>
-        <span style={s.hamburgerLine}></span>
-        <span style={s.hamburgerLine}></span>
+        <span className="dashboard-hamburger-line"></span>
+        <span className="dashboard-hamburger-line"></span>
+        <span className="dashboard-hamburger-line"></span>
       </button>
 
       {/* Sidebar overlay for mobile */}
-      {sidebarOpen && (
-        <div
-          style={s.sidebarOverlay}
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <div
+        className={`dashboard-sidebar-overlay ${sidebarOpen ? 'dashboard-sidebar-overlay-visible' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
 
       {/* Sidebar */}
-      <nav style={{...s.sidebar, ...(sidebarOpen ? s.sidebarOpen : {})}} aria-label="TetherDesk navigation">
+      <nav className={`dashboard-sidebar ${sidebarOpen ? 'dashboard-sidebar-open' : ''}`} style={s.sidebar} aria-label="TetherDesk navigation">
         <div style={s.sidebarTop}>
           <div style={s.logo}>
             <span style={s.logoMark}>TD</span>
@@ -432,7 +430,7 @@ export default function HomePage() {
       </nav>
 
       {/* Main content */}
-      <main style={s.content} aria-label="Main content">
+      <main className="dashboard-content" style={s.content} aria-label="Main content">
         <header style={s.pageHeader}>
           <div>
             <h1 style={s.pageTitle}>Pair Devices</h1>
@@ -487,7 +485,7 @@ export default function HomePage() {
           </div>
         )}
 
-        <div style={s.grid}>
+        <div className="dashboard-grid" style={s.grid}>
           {/* QR card */}
           <div style={s.card}>
             <div style={s.cardHeader}>
@@ -526,6 +524,7 @@ export default function HomePage() {
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element -- data URL, next/image provides no benefit */}
                   <img
+                    className="dashboard-qr-img"
                     src={qr.qrDataUrl}
                     alt="Pairing QR Code — scan with your phone"
                     style={s.qrImg}

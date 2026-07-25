@@ -48,80 +48,143 @@ body {
 .safe-left   { padding-left:   env(safe-area-inset-left); }
 .safe-right  { padding-right:  env(safe-area-inset-right); }
 
-/* Responsive breakpoints for dashboard */
+/* Dashboard hamburger menu - hidden by default, shown on mobile */
+.dashboard-hamburger {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 1001;
+  background: #0d0d0d;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dashboard-hamburger-line {
+  width: 20px;
+  height: 2px;
+  background-color: #e0e0e0;
+  border-radius: 2px;
+  transition: all 0.3s;
+}
+
+/* Dashboard sidebar overlay */
+.dashboard-sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* Dashboard sidebar */
+.dashboard-sidebar {
+  transition: transform 0.3s ease;
+}
+
+/* Dashboard sidebar when open on mobile */
+.dashboard-sidebar-open {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  transform: translateX(0) !important;
+  z-index: 1000;
+}
+
+/* Responsive breakpoints */
 @media (max-width: 768px) {
   /* Show hamburger menu on mobile */
-  [style*="hamburger"] {
+  .dashboard-hamburger {
     display: flex !important;
   }
   
   /* Hide sidebar by default on mobile */
-  nav[aria-label="TetherDesk navigation"] {
+  .dashboard-sidebar {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
     transform: translateX(-100%);
-    transition: transform 0.3s ease;
     z-index: 1000;
   }
   
   /* Show overlay when sidebar is open */
-  [style*="sidebarOverlay"] {
+  .dashboard-sidebar-overlay-visible {
     display: block !important;
   }
   
   /* Dashboard content padding adjustment for mobile */
-  main[aria-label="Main content"] {
+  .dashboard-content {
     padding: 60px 16px 20px !important;
   }
   
-  /* Grid 1 column on mobile */
-  [style*="gridTemplateColumns: repeat(2, 1fr)"],
-  [style*="gridTemplateColumns: repeat(auto-fit, minmax(280px, 1fr))"] {
+  /* Dashboard grid - 1 column on mobile */
+  .dashboard-grid {
     grid-template-columns: 1fr !important;
   }
   
-  /* QR code responsive sizing */
-  img[style*="width: 220"] {
+  /* Dashboard QR code responsive sizing */
+  .dashboard-qr-img {
     width: 180px !important;
     height: 180px !important;
   }
-}
-
-/* Responsive breakpoints for landing page */
-@media (max-width: 768px) {
-  /* Landing page sections padding */
-  [style*="padding: 80px 0"],
-  [style*="padding: \"80px 0\""] {
+  
+  /* Landing page sections - smaller padding on mobile */
+  .landing-section {
     padding: 40px 0 !important;
   }
   
-  /* Landing page wrap padding */
-  [style*="maxWidth: 1100"] {
+  /* Landing page wrapper - smaller side padding */
+  .landing-wrap {
     padding: 0 16px !important;
   }
   
-  /* Landing page grid 1 column on mobile */
-  [style*="gridTemplateColumns: repeat(auto-fit, minmax(280px, 1fr))"],
-  [style*="gridTemplateColumns: repeat(auto-fit, minmax(300px, 1fr))"] {
+  /* Landing page grid - 1 column on mobile */
+  .landing-grid {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
   }
   
-  /* Landing hero text sizing */
-  [style*="fontSize: clamp"] {
-    font-size: 28px !important;
+  /* Landing hero - smaller font */
+  .landing-hero-title {
+    font-size: 32px !important;
   }
   
-  /* Landing buttons stack on mobile */
-  [style*="display: flex"][style*="gap: 12"] {
+  /* Landing buttons - stack vertically */
+  .landing-buttons {
     flex-direction: column !important;
     align-items: stretch !important;
   }
   
-  /* Terminal demo responsive */
-  [style*="maxWidth: 680"] {
-    max-width: 100% !important;
+  /* Docs page - smaller padding */
+  .docs-wrap {
+    padding: 0 16px !important;
+  }
+  
+  /* Docs grid - 1 column on mobile */
+  .docs-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Access page - responsive layout */
+  .access-container {
+    padding: 20px 16px !important;
+  }
+  
+  /* Navbar - responsive */
+  .navbar-desktop {
+    display: none !important;
+  }
+  
+  .navbar-mobile {
+    display: flex !important;
   }
 }

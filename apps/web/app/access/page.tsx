@@ -98,7 +98,7 @@ export default function AccessPage() {
   const isValidKey = key.trim().length > 0;
 
   return (
-    <div style={s.page}>
+    <div className="access-container" style={s.page}>
       <div style={s.card}>
         <div style={s.logo}>TetherDesk</div>
         <div style={s.version}>
