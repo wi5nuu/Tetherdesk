@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 
 /* ------------------------------------------------------------------ */
@@ -8,7 +8,7 @@ import Link from "next/link";
 /* ------------------------------------------------------------------ */
 
 const t = {
-  page: { background: "#0a0a0a", color: "#e0e0e0", fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', minHeight: "100dvh", overflowX: "hidden" as const } as React.CSSProperties,
+  page: { background: "#0a0a0a", color: "#e0e0e0", fontFamily: '"Calibri", "Segoe UI", Tahoma, Geneva, sans-serif', minHeight: "100dvh", overflowX: "hidden" as const } as React.CSSProperties,
   wrap: { maxWidth: 1100, margin: "0 auto", padding: "0 20px" } as React.CSSProperties,
   ac: { color: "#4ade80" } as React.CSSProperties,
   dim: { color: "#666" } as React.CSSProperties,
@@ -51,7 +51,7 @@ function Navbar() {
   const links = [
     { label: "Features", href: "#features" },
     { label: "How it Works", href: "#how-it-works" },
-    { label: "Docs", href: "https://github.com/wi5nuu/Tetherdesk#readme" },
+    { label: "Docs", href: "/docs" },
   ];
 
   return (
@@ -101,19 +101,19 @@ function Hero() {
       }} />
       <div style={{ ...t.wrap, position: "relative" as const }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#111", border: "1px solid #1f1f1f", borderRadius: 20, padding: "4px 14px 4px 4px", marginBottom: 32, fontSize: 12 }}>
-          <span style={{ background: "#4ade80", color: "#0a0a0a", borderRadius: 20, padding: "2px 10px", fontWeight: 600 }}>NEW</span>
-          <span style={{ color: "#888" }}>Now Available</span>
+          <span style={{ background: "#4ade80", color: "#0a0a0a", borderRadius: 20, padding: "2px 10px", fontWeight: 600 }}>OPEN SOURCE</span>
+          <span style={{ color: "#888" }}>Free & Self-Hosted</span>
         </div>
         <h1 style={{ fontSize: "clamp(36px, 8vw, 64px)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", marginBottom: 20 }}>
-          <div>Code from bed.</div>
-          <div>Fix bugs at the cafe.</div>
-          <div>Deploy from anywhere.</div>
+          <div>Control your laptop</div>
+          <div>from your phone.</div>
+          <div>Anywhere.</div>
         </h1>
         <p style={{ ...t.p, margin: "0 auto 40px", fontSize: "clamp(15px, 2.5vw, 18px)", maxWidth: 520 }}>
-          Your terminal. Your phone. Zero config. Claude Code in your pocket.
+          Zero-config remote desktop. Scan QR, tap to control. End-to-end encrypted P2P connection via WebRTC.
         </p>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
-          <Link href="/access" style={{ ...t.btn, ...t.btnPrimary, fontSize: 16, padding: "14px 36px" }}>Get Remote</Link>
+          <Link href="/access" style={{ ...t.btn, ...t.btnPrimary, fontSize: 16, padding: "14px 36px" }}>Start Pairing</Link>
           <Link href="/dashboard" style={{ ...t.btn, ...t.btnOutline, fontSize: 16, padding: "14px 36px" }}>Dashboard</Link>
         </div>
       </div>
@@ -169,77 +169,106 @@ function TerminalDemo() {
 }
 
 function WhyChoose() {
-  const features = [
-    "Zero Config", "Terminal Access", "Remote Desktop", "File Explorer",
-    "Code Editor", "Git Integration", "Mobile Optimized", "Browser-Based",
-    "QR Login", "Auto Tunnel", "Persistent Sessions", "Multi-Device Sync",
-    "Push Notifications", "AI Integration", "No Port Forwarding", "No Account Required",
-  ];
-
-  const competitors: Array<{ name: string; present: boolean[] }> = [
-    { name: "TetherDesk", present: features.map(() => true) },
-    { name: "Claude Remote", present: [true, true, false, false, false, false, false, true, false, true, false, false, false, true, false, true] },
-    { name: "TeamViewer", present: [false, false, true, true, false, false, false, false, false, false, false, true, false, false, false, true] },
-    { name: "Chrome Remote", present: [false, false, true, false, false, false, false, true, false, false, false, false, false, false, false, false] },
-    { name: "Termius", present: [false, true, false, false, false, false, true, false, false, false, false, true, false, false, false, true] },
+  const benefits = [
+    { 
+      title: "Zero Infrastructure Cost", 
+      desc: "Runs entirely on free tiers: Vercel Hobby + Upstash free Redis. No monthly subscription, no hidden charges.",
+      icon: "💰"
+    },
+    { 
+      title: "End-to-End Encrypted", 
+      desc: "X25519 ECDH key exchange + AES-256-GCM encryption. Session keys never leave your devices. Server only relays encrypted messages.",
+      icon: "🔒"
+    },
+    { 
+      title: "Direct P2P Connection", 
+      desc: "WebRTC connects your laptop and phone directly. Vercel backend only helps with initial pairing, then gets out of the way.",
+      icon: "🌐"
+    },
+    { 
+      title: "No App Store Required", 
+      desc: "Phone client is a Progressive Web App (PWA). Works on any modern browser - iOS Safari, Android Chrome, desktop browsers.",
+      icon: "📱"
+    },
+    { 
+      title: "90-Second Pairing", 
+      desc: "QR code expires in 90 seconds for security. One-time pairing keys (TD-XXXXXX) or persistent API keys (sk-xxx...) for repeat access.",
+      icon: "⚡"
+    },
+    { 
+      title: "Open Source & Auditable", 
+      desc: "Full source code available on GitHub. Deploy your own backend, audit the crypto, modify as needed. No vendor lock-in.",
+      icon: "🔓"
+    },
   ];
 
   return (
-    <section id="features" style={t.sectionAlt}>
+    <section id="why" style={t.sectionAlt}>
       <div style={t.wrap}>
-        <h2 style={{ ...t.h2, ...t.center }}>Why Choose TetherDesk?</h2>
-        <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>Compare features with other remote access solutions</p>
-        <div className="landing-table-wrapper">
-          <table className="landing-table">
-            <thead>
-              <tr>
-                <th>Feature</th>
-                {competitors.map((c) => <th key={c.name}>{c.name}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {features.map((f, i) => (
-                <tr key={f}>
-                  <td style={{ color: "#e0e0e0", fontWeight: 500 }}>{f}</td>
-                  {competitors.map((c) => (
-                    <td key={c.name}>
-                      <span className={c.present[i] ? "landing-check" : "landing-cross"}>
-                        {c.present[i] ? "✓" : "—"}
-                      </span>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p style={{ ...t.center, fontSize: 13, color: "#4ade80", marginTop: 16, fontWeight: 500 }}>
-          TetherDesk: All-in-one · {features.length}/{features.length} features
+        <h2 style={{ ...t.h2, ...t.center }}>Why TetherDesk?</h2>
+        <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>
+          Built for developers who want secure remote access without the complexity
         </p>
+        <div style={t.grid3}>
+          {benefits.map((item) => (
+            <div key={item.title} style={{ 
+              background: "#0f0f0f", 
+              border: "1px solid #1a1a1a", 
+              borderRadius: 12, 
+              padding: 28,
+              transition: "all 0.2s"
+            }}>
+              <div style={{ fontSize: 32, marginBottom: 14 }}>{item.icon}</div>
+              <h3 style={t.h3}>{item.title}</h3>
+              <p style={{ ...t.p, fontSize: 14 }}>{item.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
+function IconBox({ children }: { children: ReactNode }) {
+  return (
+    <div style={{
+      width: 44, height: 44, borderRadius: 10,
+      background: "linear-gradient(135deg, #166534 0%, #0a2e14 100%)",
+      border: "1px solid #22c55e33",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 18, fontWeight: 700, color: "#4ade80", marginBottom: 14,
+      fontFamily: '"SF Mono", "Fira Code", monospace',
+    }}>
+      {children}
+    </div>
+  );
+}
+
 function Features() {
   const items = [
-    { title: "Code from bed", desc: "Terminal on phone", icon: "🖥" },
-    { title: "Deploy at cafe", desc: "No heavy laptop needed", icon: "☕" },
-    { title: "Fix bugs anywhere", desc: "Access from everywhere", icon: "🔧" },
-    { title: "Secure & fast", desc: "Auto tunnel, <50ms", icon: "🔒" },
-    { title: "Simple & powerful", desc: "Just scan QR", icon: "📱" },
-    { title: "Light & smooth", desc: "No lag, no freeze", icon: "⚡" },
+    { title: "Screen Control", desc: "View and control your laptop screen from your phone. Mouse, keyboard, and touch gestures via WebRTC.", icon: ">_" },
+    { title: "Zero Config", desc: "No port forwarding, no DNS setup. Just npx tetherdesk start and scan the QR code.", icon: "~/" },
+    { title: "E2E Encrypted", desc: "X25519 ECDH + AES-256-GCM. Session keys derived locally, never transmitted. Server only relays encrypted messages.", icon: "SSL" },
+    { title: "QR Pairing", desc: "Scan QR code from terminal with any camera app. 90-second expiry for security. No app store needed.", icon: "QR" },
+    { title: "Persistent Keys", desc: "Generate API keys (sk-xxx...) from dashboard for repeat access without QR scanning every time.", icon: "KEY" },
+    { title: "Mobile PWA", desc: "Phone client runs in browser as Progressive Web App. iOS Safari, Android Chrome - no installation.", icon: "PWA" },
   ];
 
   return (
     <section style={t.sectionAlt}>
       <div style={t.wrap}>
-        <h2 style={{ ...t.h2, ...t.center }}>Powerful Features</h2>
-        <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>Everything you need for secure remote access</p>
+        <h2 style={{ ...t.h2, ...t.center }}>Core Features</h2>
+        <p style={{ ...t.p, margin: "0 auto 48px", ...t.center }}>Everything you need for secure remote laptop access</p>
         <div style={t.grid3}>
           {items.map((item) => (
-            <div key={item.title} className="landing-card" style={{ padding: 28 }}>
-              <div style={{ fontSize: 28, marginBottom: 12 }}>{item.icon}</div>
+            <div key={item.title} style={{ 
+              background: "#0f0f0f", 
+              border: "1px solid #1a1a1a", 
+              borderRadius: 12, 
+              padding: 28,
+              transition: "all 0.2s"
+            }}>
+              <IconBox>{item.icon}</IconBox>
               <h3 style={t.h3}>{item.title}</h3>
               <p style={{ ...t.p, fontSize: 14 }}>{item.desc}</p>
             </div>
@@ -252,9 +281,9 @@ function Features() {
 
 function HowItWorks() {
   const steps = [
-    { num: "01", title: "Run on your computer", desc: "Install TetherDesk and start the agent. It creates a secure tunnel instantly." },
-    { num: "02", title: "Scan QR or enter key", desc: "Scan the QR code with your phone, or enter the access key shown in your terminal." },
-    { num: "03", title: "Prompt from anywhere", desc: "Type on your phone, code runs on your computer. Real-time, zero lag." },
+    { num: "01", title: "Install & Start Agent", desc: "Run npx tetherdesk start on your laptop. Agent starts, generates QR code with pairing token." },
+    { num: "02", title: "Scan QR or Enter Key", desc: "Open the URL on your phone, scan QR code, or enter one-time key (TD-XXXXXX). ECDH handshake establishes session key." },
+    { num: "03", title: "Control from Anywhere", desc: "WebRTC P2P connection streams your screen. Tap to click, swipe to scroll. Works across different networks." },
   ];
 
   return (
@@ -356,7 +385,7 @@ function Footer() {
               <p style={{ fontSize: 12, color: "#888", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Resources</p>
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <a href="https://github.com/wi5nuu/Tetherdesk" style={fl()} target="_blank" rel="noopener noreferrer">GitHub</a>
-                <a href="https://github.com/wi5nuu/Tetherdesk#readme" style={fl()} target="_blank" rel="noopener noreferrer">Documentation</a>
+                <Link href="/docs" style={fl()}>Documentation</Link>
                 <a href="https://github.com/wi5nuu/Tetherdesk/discussions" style={fl()} target="_blank" rel="noopener noreferrer">Community</a>
               </div>
             </div>
@@ -366,7 +395,7 @@ function Footer() {
           <span>Built with Next.js, WebRTC, and Cloudflare</span>
           <div style={{ display: "flex", gap: 16, marginLeft: "auto" }}>
             <a href="https://github.com/wi5nuu/Tetherdesk" style={fl("#555")} target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a href="https://github.com/wi5nuu/Tetherdesk#readme" style={fl("#555")} target="_blank" rel="noopener noreferrer">Docs</a>
+            <Link href="/docs" style={fl("#555")}>Docs</Link>
           </div>
         </div>
       </div>

@@ -75,6 +75,7 @@ export default function HomePage() {
   const [apiKeyCopied, setApiKeyCopied] = useState(false);
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [autoApprove, setAutoApprove] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -365,8 +366,27 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Mobile hamburger menu */}
+      <button
+        style={s.hamburger}
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-label="Toggle navigation menu"
+      >
+        <span style={s.hamburgerLine}></span>
+        <span style={s.hamburgerLine}></span>
+        <span style={s.hamburgerLine}></span>
+      </button>
+
+      {/* Sidebar overlay for mobile */}
+      {sidebarOpen && (
+        <div
+          style={s.sidebarOverlay}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <nav style={s.sidebar} aria-label="TetherDesk navigation">
+      <nav style={{...s.sidebar, ...(sidebarOpen ? s.sidebarOpen : {})}} aria-label="TetherDesk navigation">
         <div style={s.sidebarTop}>
           <div style={s.logo}>
             <span style={s.logoMark}>TD</span>
@@ -771,6 +791,38 @@ const s: Record<string, React.CSSProperties> = {
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
     fontSize: 14,
+    position: "relative",
+  },
+  hamburger: {
+    display: "none",
+    position: "fixed",
+    top: 16,
+    left: 16,
+    zIndex: 1001,
+    background: "#0d0d0d",
+    border: "1px solid #1a1a1a",
+    borderRadius: 8,
+    padding: 12,
+    cursor: "pointer",
+    flexDirection: "column",
+    gap: 4,
+  },
+  hamburgerLine: {
+    width: 20,
+    height: 2,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 2,
+    transition: "all 0.3s",
+  },
+  sidebarOverlay: {
+    display: "none",
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 999,
   },
   sidebar: {
     width: 220,
@@ -781,6 +833,15 @@ const s: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     justifyContent: "space-between",
     padding: "20px 0",
+    position: "relative",
+    zIndex: 1000,
+  },
+  sidebarOpen: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    transform: "translateX(0)",
   },
   sidebarTop: { display: "flex", flexDirection: "column", gap: 8 },
   sidebarBottom: { padding: "0 16px" },
@@ -865,6 +926,8 @@ const s: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 12,
   },
   pageTitle: {
     fontSize: 22,
@@ -874,7 +937,7 @@ const s: Record<string, React.CSSProperties> = {
     letterSpacing: "-0.03em",
   },
   pageSubtitle: { fontSize: 13, color: "#555", margin: "4px 0 0" },
-  headerRight: { display: "flex", alignItems: "center", gap: 8 },
+  headerRight: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" },
   pill: {
     display: "inline-flex",
     alignItems: "center",
@@ -888,7 +951,7 @@ const s: Record<string, React.CSSProperties> = {
   banner: { borderRadius: 8, padding: "10px 14px", fontSize: 13, fontWeight: 500 },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
     gap: 16,
   },
   card: {
