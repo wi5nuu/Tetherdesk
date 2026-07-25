@@ -68,7 +68,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!stored || typeof stored !== "string") {
       return jsonError(ErrorCode.UNAUTHORIZED, "Invalid API key");
     }
-    return jsonOk({ type: "persistent", redirect: "/control", sessionId: stored });
+    // API key confirms identity but cannot create a WebRTC session on its own.
+    // The user still needs to scan the laptop QR to do the ECDH handshake and
+    // produce the session crypto key that /control requires.
+    return jsonOk({ type: "persistent", redirect: "/pair", sessionId: stored });
   }
 
   // One-time key: the pairing token (with or without TD- prefix)
