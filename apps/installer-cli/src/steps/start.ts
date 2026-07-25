@@ -1,13 +1,17 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { writeFile, mkdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { writeFile, mkdir, readFile, access as fsAccess } from "node:fs/promises";
+import { join, dirname } from "node:path";
 import { homedir } from "node:os";
-import { existsSync } from "node:fs";
 import { randomBytes } from "node:crypto";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import pc from "picocolors";
 
 const AGENT_DIR = join(homedir(), ".tetherdesk");
 const CONFIG_PATH = join(AGENT_DIR, "config.json");
+
+// Default backend — the Vercel deployment
+const DEFAULT_BACKEND = "https://tetherdesk-five.vercel.app";
 
 interface AgentConfig {
   backendOrigin?: string;
@@ -41,90 +45,42 @@ async function writeConfig(config: AgentConfig): Promise<void> {
   await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
 }
 
-const CLOUDFLARED_CANDIDATES = [
-  join(process.cwd(), "apps", "web", "cloudflared.exe"),
-  join(process.cwd(), "apps", "web", "cloudflared"),
-  "cloudflared",
-];
+function generateAgentSecret(): string {
+  return randomBytes(32).toString("base64url");
+}
 
-function findCloudflared(): string {
-  for (const candidate of CLOUDFLARED_CANDIDATES) {
-    if (existsSync(candidate)) return candidate;
+/**
+ * Find the agent entry point bundled inside the tetherdesk package.
+ * During build, apps/agent/dist/main.js is copied to dist/agent/main.js.
+ * Falls back to the workspace path for local dev.
+ */
+function findAgentScript(): string {
+  const _require = createRequire(import.meta.url);
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+
+  // 1. Bundled alongside CLI (production: dist/agent/main.js)
+  const bundledPath = join(__dirname, "agent", "main.js");
+
+  // 2. Workspace sibling (dev: apps/agent/dist/main.js)
+  const workspacePath = join(__dirname, "..", "..", "..", "apps", "agent", "dist", "main.js");
+
+  // Try resolving @tetherdesk/agent if installed as a dep
+  try {
+    return _require.resolve("@tetherdesk/agent");
+  } catch {
+    // not installed as a peer dep
   }
-  return "cloudflared";
-}
 
-function spawnProcess(
-  cmd: string,
-  args: string[],
-  opts: { stdio?: "inherit" | "pipe"; cwd?: string; env?: Record<string, string> } = {},
-): ChildProcess {
-  return spawn(cmd, args, {
-    stdio: opts.stdio ?? "inherit",
-    cwd: opts.cwd ?? process.cwd(),
-    shell: process.platform === "win32",
-    env: opts.env ? { ...process.env, ...opts.env } : undefined,
-  });
-}
+  // Use bundled or workspace path (existsSync not needed — node will error clearly)
+  try {
+    const { existsSync } = require("node:fs") as typeof import("node:fs");
+    if (existsSync(bundledPath)) return bundledPath;
+    if (existsSync(workspacePath)) return workspacePath;
+  } catch {
+    // ignore
+  }
 
-export function parseTunnelUrl(line: string): string | null {
-  const urlMatch = line.match(/url=(https:\/\/[^\s]+\.trycloudflare\.com)/);
-  if (urlMatch) return urlMatch[1] ?? null;
-  const boxMatch = line.match(/(https:\/\/[^\s]+\.trycloudflare\.com)/);
-  if (boxMatch) return boxMatch[1] ?? null;
-  return null;
-}
-
-function startTunnel(): Promise<{ url: string; proc: ChildProcess }> {
-  return new Promise((resolve, reject) => {
-    const cloudflared = findCloudflared();
-    console.log(pc.dim(`  Running: ${cloudflared} tunnel --url http://localhost:3000`));
-
-    const proc = spawn(cloudflared, ["tunnel", "--url", "http://localhost:3000"], {
-      stdio: ["ignore", "pipe", "pipe"],
-      shell: process.platform === "win32",
-    });
-
-    let resolved = false;
-
-    const onData = (chunk: Buffer) => {
-      const text = chunk.toString();
-      process.stderr.write(pc.dim(text));
-      if (!resolved) {
-        for (const line of text.split("\n")) {
-          const url = parseTunnelUrl(line);
-          if (url) {
-            resolved = true;
-            resolve({ url, proc });
-            return;
-          }
-        }
-      }
-    };
-
-    proc.stdout?.on("data", onData);
-    proc.stderr?.on("data", onData);
-
-    proc.on("error", (err) => {
-      if (!resolved) reject(new Error(`cloudflared failed to start: ${err.message}`));
-    });
-
-    proc.on("exit", (code) => {
-      if (!resolved)
-        reject(new Error(`cloudflared exited unexpectedly with code ${String(code)}`));
-    });
-
-    setTimeout(() => {
-      if (!resolved) {
-        reject(
-          new Error(
-            "Timed out waiting for cloudflared tunnel URL (30s).\n" +
-              "Make sure cloudflared is installed or is present at apps/web/cloudflared.exe",
-          ),
-        );
-      }
-    }, 30_000);
-  });
+  return bundledPath; // let node throw a clear "module not found" if missing
 }
 
 function killProc(proc: ChildProcess): void {
@@ -139,12 +95,8 @@ function killProc(proc: ChildProcess): void {
   }
 }
 
-function generateAgentSecret(): string {
-  return randomBytes(32).toString("base64url");
-}
-
 export interface StartOptions {
-  /** Fixed backend URL — skip tunnel creation and use this domain instead */
+  /** Fixed backend URL — skip config lookup and use this domain */
   domain?: string;
 }
 
@@ -160,115 +112,105 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
   process.on("SIGINT", cleanup);
   process.on("SIGTERM", cleanup);
 
-  let tunnelUrl: string;
+  // ── Resolve backend URL ────────────────────────────────────────────────────
+  const existingConfig = await readConfig();
 
-  // ── Step 1: Determine the backend URL ─────────────────────────────────────
-  // Priority: --domain flag > existing config > new tunnel
+  let backendUrl: string;
   if (options.domain) {
-    tunnelUrl = options.domain;
-    console.log(pc.bold(`\nUsing fixed domain: ${tunnelUrl}\n`));
+    backendUrl = options.domain;
+    console.log(pc.dim(`  Using provided domain: ${backendUrl}`));
+  } else if (existingConfig.backendOrigin) {
+    backendUrl = existingConfig.backendOrigin;
+    console.log(pc.dim(`  Using saved backend: ${backendUrl}`));
   } else {
-    const existingConfig = await readConfig();
-    if (existingConfig.backendOrigin) {
-      tunnelUrl = existingConfig.backendOrigin;
-      console.log(pc.bold(pc.cyan(`\nUsing saved domain from config: ${tunnelUrl}`)));
-      console.log(pc.dim("  To start with a fresh tunnel, set --new-tunnel flag.\n"));
-    } else {
-      console.log(pc.bold("\n[1/3] Starting Cloudflare tunnel…"));
-      let tunnelProc: ChildProcess;
-      try {
-        ({ url: tunnelUrl, proc: tunnelProc } = await startTunnel());
-        procs.push(tunnelProc);
-
-        // Watchdog: restart cloudflared automatically if it crashes
-        tunnelProc.on("exit", (code) => {
-          if (code !== 0 && code !== null) {
-            console.log(pc.yellow(`\n  Tunnel exited with code ${code}, restarting…`));
-            startTunnel().then((restarted) => {
-              tunnelUrl = restarted.url;
-              tunnelProc = restarted.proc;
-              procs.push(restarted.proc);
-              readConfig().then((config) =>
-                writeConfig({ ...config, backendOrigin: tunnelUrl })
-              ).then(() => {
-                console.log(pc.green(`  Tunnel restarted: ${tunnelUrl}`));
-              });
-            }).catch(() => {
-              console.error(pc.red("  Failed to restart tunnel. Run `tetherdesk start` again."));
-            });
-          }
-        });
-      } catch (err) {
-        throw new Error(
-          `Tunnel failed: ${err instanceof Error ? err.message : String(err)}\n\n` +
-            `Download cloudflared from https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/\n` +
-            `and place it at apps/web/cloudflared.exe`,
-        );
-      }
-      console.log(pc.bold(pc.green(`\n  Tunnel URL: ${tunnelUrl}`)));
-    }
+    backendUrl = DEFAULT_BACKEND;
+    console.log(pc.dim(`  Using default backend: ${backendUrl}`));
   }
 
-  // ── Step 2: Write tunnel URL and agent secret to config ────────────────────
-  const existingConfig = await readConfig();
-  // Auto-generate AGENT_SECRET if not present
+  // ── Persist config ─────────────────────────────────────────────────────────
   const agentSecret = existingConfig.agentSecret ?? generateAgentSecret();
-  await writeConfig({
-    ...existingConfig,
-    backendOrigin: tunnelUrl,
-    agentSecret,
-  });
-  console.log(pc.dim(`  Saved to ${CONFIG_PATH}`));
+  await writeConfig({ ...existingConfig, backendOrigin: backendUrl, agentSecret });
+  console.log(pc.dim(`  Config saved to ${CONFIG_PATH}\n`));
 
-  // ── Step 3: Start Next.js backend ─────────────────────────────────────────
-  console.log(pc.bold("\n[2/3] Starting backend (Next.js)…"));
-  console.log(pc.dim("  Waiting for http://localhost:3000 to be ready…\n"));
+  // ── Start agent ────────────────────────────────────────────────────────────
+  console.log(pc.bold("[1/1] Starting TetherDesk agent…\n"));
 
-  const webProc = spawnProcess("pnpm", ["--filter", "@tetherdesk/web", "dev"]);
-  procs.push(webProc);
+  const agentScript = findAgentScript();
 
-  await new Promise<void>((resolve) => setTimeout(resolve, 8_000));
-
-  // ── Step 4: Start agent ───────────────────────────────────────────────────
-  console.log(pc.bold("\n[3/3] Starting agent…\n"));
-  const agentProc = spawnProcess("pnpm", ["--filter", "@tetherdesk/agent", "dev"], {
-    env: { AGENT_SECRET: agentSecret },
+  const agentProc = spawn(process.execPath, [agentScript, "start"], {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      TETHERDESK_BACKEND_URL: backendUrl,
+      AGENT_SECRET: agentSecret,
+    },
   });
   procs.push(agentProc);
 
-  // ── Print instructions ────────────────────────────────────────────────────
-  console.log(pc.bold(pc.green("\n TetherDesk is running!\n")));
-  console.log(pc.cyan("  1. Open the dashboard:  ") + pc.bold(`${tunnelUrl}/dashboard`));
-  console.log(pc.cyan("  2. Scan the QR code on your phone"));
-  console.log(pc.cyan("  3. Tap Allow on this laptop to approve the connection"));
-  console.log(pc.dim("\n  Press Ctrl+C to stop all processes.\n"));
+  agentProc.on("error", (err) => {
+    console.error(pc.red(`\n  Agent failed to start: ${err.message}`));
+    console.error(pc.dim(`  Agent path: ${agentScript}`));
+    console.error(pc.dim(`  Run 'npx tetherdesk init' to set up TetherDesk first.`));
+    process.exit(1);
+  });
 
-  // ── Fetch and print one-time pairing key ──────────────────────────────────
-  // Poll /api/pairing/active-qr until agent registers a QR (max 30s)
-  const printPairingKey = async () => {
-    const maxAttempts = 15;
+  agentProc.on("exit", (code) => {
+    if (code !== 0 && code !== null) {
+      console.error(pc.red(`\n  Agent exited unexpectedly (code ${code}).`));
+      console.error(pc.dim(`  Check logs: Get-Content ~\\.tetherdesk\\logs\\agent.log -Wait`));
+      process.exit(1);
+    }
+  });
+
+  // ── Print instructions ─────────────────────────────────────────────────────
+  console.log(pc.bold(pc.green(" TetherDesk is running!\n")));
+  console.log(pc.cyan("  Dashboard: ") + pc.bold(`${backendUrl}/dashboard`));
+  console.log(pc.dim("\n  Waiting for access key…"));
+  console.log(pc.dim("  Press Ctrl+C to stop.\n"));
+
+  // ── Poll for pairing key and print it ─────────────────────────────────────
+  void (async () => {
+    const maxAttempts = 20;
     for (let i = 0; i < maxAttempts; i++) {
-      await new Promise<void>((r) => setTimeout(r, 2_000));
+      await new Promise<void>((r) => setTimeout(r, 3_000));
       try {
-        const resp = await fetch(`http://localhost:3000/api/pairing/active-qr`, { signal: AbortSignal.timeout(5_000) });
+        const resp = await fetch(`${backendUrl}/api/pairing/active-qr`, {
+          signal: AbortSignal.timeout(5_000),
+        });
         if (!resp.ok) continue;
         const json = await resp.json() as { ok: boolean; data?: { pairingUrl: string } };
         if (!json.ok || !json.data?.pairingUrl) continue;
-        // Extract token from URL: /pair/<token>
+
         const match = json.data.pairingUrl.match(/\/pair\/([A-Za-z0-9_-]+)/);
         if (!match) continue;
         const token = match[1];
-        console.log(pc.bold(pc.yellow("\n  One-time access key:")));
-        console.log(pc.bold(pc.green(`  TD-${token}`)));
-        console.log(pc.dim("  Enter this key on your phone at: ") + pc.bold(`${tunnelUrl}/access`));
-        console.log(pc.dim("  (Key expires in 90 seconds)\n"));
-        return;
-      } catch { /* keep polling */ }
-    }
-  };
-  void printPairingKey();
 
+        console.log(pc.bold(pc.yellow("\n  ╔══════════════════════════════════╗")));
+        console.log(pc.bold(pc.yellow("  ║       YOUR ACCESS KEY            ║")));
+        console.log(pc.bold(pc.yellow("  ╠══════════════════════════════════╣")));
+        console.log(pc.bold(pc.green(`  ║   TD-${token.padEnd(28)}║`)));
+        console.log(pc.bold(pc.yellow("  ╚══════════════════════════════════╝")));
+        console.log();
+        console.log(pc.cyan("  Steps:"));
+        console.log(pc.white(`  1. Open dashboard: `) + pc.bold(`${backendUrl}/dashboard`));
+        console.log(pc.white(`  2. Enter key above in the "Access Key" field`));
+        console.log(pc.white(`  3. Click Allow on this laptop when prompted`));
+        console.log(pc.white(`  4. Your phone can now control this laptop`));
+        console.log();
+        console.log(pc.dim(`  (Key expires in 90 seconds — a new one will appear automatically)`));
+        return;
+      } catch {
+        // keep polling
+      }
+    }
+    // If polling times out, show manual instructions
+    console.log(pc.yellow("\n  Could not retrieve access key automatically."));
+    console.log(pc.dim(`  Open the dashboard and scan the QR code manually:`));
+    console.log(pc.bold(`  ${backendUrl}/dashboard`));
+  })();
+
+  // Keep process alive until Ctrl+C
   await new Promise<void>(() => {
-    // intentionally never resolves; cleanup() handles exit
+    // intentionally never resolves — cleanup() handles exit
   });
 }
