@@ -11,6 +11,9 @@ export const TRANSLATIONS = {
       docs: "Docs",
       getStarted: "Get Started",
       donate: "Donate",
+      home: "Home",
+      access: "Access",
+      dashboard: "Dashboard",
     },
     // Hero
     hero: {
@@ -90,6 +93,10 @@ export const TRANSLATIONS = {
     // Footer
     footer: {
       built: "Built with Next.js, WebRTC, and Redis",
+      subtitle: "Secure remote terminal and desktop access. Connect to your machines from anywhere in the world.",
+      product: "Product",
+      resources: "Resources",
+      community: "Community",
     },
     // Donate
     donate: {
@@ -339,6 +346,9 @@ export const TRANSLATIONS = {
       docs: "Dokumentasi",
       getStarted: "Mulai",
       donate: "Donasi",
+      home: "Beranda",
+      access: "Akses",
+      dashboard: "Dashboard",
     },
     // Hero
     hero: {
@@ -418,6 +428,10 @@ export const TRANSLATIONS = {
     // Footer
     footer: {
       built: "Dibuat dengan Next.js, WebRTC, dan Redis",
+      subtitle: "Akses remote terminal dan desktop yang aman. Hubungkan mesin-mesinmu dari mana saja di dunia.",
+      product: "Produk",
+      resources: "Sumber Daya",
+      community: "Komunitas",
     },
     // Donate
     donate: {

@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useLang } from "../lib/lang-context";
 import { DonateModal } from "./components/DonateModal";
+import { Navbar } from "./components/Navbar";
+import { Footer } from "./components/Footer";
 
 /* ------------------------------------------------------------------ */
 /*  Styles                                                             */
@@ -26,8 +28,6 @@ const s = {
   grid3: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24, marginTop: 48 } as React.CSSProperties,
   grid2: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginTop: 48 } as React.CSSProperties,
 };
-
-const APP_VERSION = "2.1.27";
 
 /* ------------------------------------------------------------------ */
 /*  SVG Icons                                                          */
@@ -56,115 +56,6 @@ function IconBox({ icon }: { icon: keyof typeof ICONS }) {
     <div style={{ width: 44, height: 44, borderRadius: 10, background: "linear-gradient(135deg, #166534 0%, #0a2e14 100%)", border: "1px solid #22c55e33", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
       <SvgIcon path={ICONS[icon]} />
     </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Language Switcher                                                  */
-/* ------------------------------------------------------------------ */
-
-function LangSwitcher() {
-  const { lang, setLang } = useLang();
-  return (
-    <div style={{ display: "flex", alignItems: "center", background: "#111", border: "1px solid #1f1f1f", borderRadius: 6, overflow: "hidden", flexShrink: 0 }}>
-      {(["en", "id"] as const).map((l) => (
-        <button
-          key={l}
-          onClick={() => setLang(l)}
-          aria-pressed={lang === l}
-          style={{
-            padding: "4px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer",
-            border: "none", transition: "all 0.15s",
-            background: lang === l ? "#4ade80" : "transparent",
-            color: lang === l ? "#0a0a0a" : "#555",
-          }}
-        >
-          {l.toUpperCase()}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Navbar                                                             */
-/* ------------------------------------------------------------------ */
-
-function Navbar({ onDonate }: { onDonate: () => void }) {
-  const [menu, setMenu] = useState(false);
-  const { tr } = useLang();
-  const n = tr.nav;
-
-  const links = [
-    { label: n.features, href: "#features" },
-    { label: n.howItWorks, href: "#how-it-works" },
-    { label: n.docs, href: "/docs" },
-  ];
-
-  return (
-    <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,10,0.85)", backdropFilter: "blur(12px)", borderBottom: "1px solid #141414" }}>
-      <div className="landing-wrap" style={{ ...s.wrap, display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
-        {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontWeight: 700, fontSize: 18, color: "#4ade80" }}>TetherDesk</span>
-          <span style={{ fontSize: 11, color: "#555", padding: "2px 6px", border: "1px solid #222", borderRadius: 4 }}>v{APP_VERSION}</span>
-        </div>
-
-        {/* Desktop right side */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ display: "none", gap: 20, alignItems: "center" }} className="landing-nav-desktop">
-            {links.map((l) => (
-              <Link key={l.label} href={l.href} className="navbar-link" style={{ color: "#888", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>
-                {l.label}
-              </Link>
-            ))}
-          </div>
-
-          {/* Donate button — desktop */}
-          <button
-            onClick={onDonate}
-            className="btn-secondary landing-nav-desktop"
-            style={{ display: "none", alignItems: "center", gap: 6, padding: "6px 14px", background: "transparent", border: "1px solid #2a2a2a", borderRadius: 6, color: "#888", fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s" }}
-          >
-            ♥ {n.donate}
-          </button>
-
-          <LangSwitcher />
-
-          <Link href="/access" className="btn-primary" style={{ ...s.btn, ...s.btnPrimary, fontSize: 13, padding: "8px 18px" }}>
-            {n.getStarted}
-          </Link>
-
-          {/* Hamburger */}
-          <button
-            onClick={() => setMenu(!menu)}
-            style={{ background: "none", border: "none", color: "#888", fontSize: 22, cursor: "pointer", display: "none" }}
-            className="landing-menu-btn"
-            aria-expanded={menu}
-            aria-label="Toggle navigation menu"
-          >
-            {menu ? "✕" : "☰"}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile menu */}
-      {menu && (
-        <div style={{ borderTop: "1px solid #141414", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-          {links.map((l) => (
-            <a key={l.label} href={l.href} className="mobile-menu-link" style={{ color: "#888", textDecoration: "none", fontSize: 15 }} onClick={() => setMenu(false)}>
-              {l.label}
-            </a>
-          ))}
-          <button
-            onClick={() => { setMenu(false); onDonate(); }}
-            style={{ background: "none", border: "none", color: "#888", textAlign: "left", padding: 0, fontSize: 15, cursor: "pointer" }}
-          >
-            ♥ {n.donate}
-          </button>
-        </div>
-      )}
-    </nav>
   );
 }
 
@@ -394,63 +285,6 @@ function CliDemo() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Footer                                                             */
-/* ------------------------------------------------------------------ */
-
-function Footer({ onDonate }: { onDonate: () => void }) {
-  const { tr } = useLang();
-  const n = tr.nav;
-  const d = tr.donate;
-  const fl = (color = "#666") => ({ color, textDecoration: "none", cursor: "pointer", fontSize: 13, lineHeight: 2 } as React.CSSProperties);
-
-  return (
-    <footer style={{ borderTop: "1px solid #141414", padding: "48px 0 32px" }}>
-      <div style={s.wrap}>
-        <div className="landing-grid" style={s.grid2}>
-          <div>
-            <span style={{ fontWeight: 700, fontSize: 16, color: "#4ade80" }}>TetherDesk</span>
-            <p style={{ ...s.p, fontSize: 13, marginTop: 8 }}>Secure remote terminal and desktop access. Connect to your machines from anywhere in the world.</p>
-            {/* Donate button in footer */}
-            <button
-              onClick={onDonate}
-              className="btn-secondary"
-              style={{ marginTop: 16, display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "transparent", border: "1px solid #2a2a2a", borderRadius: 6, color: "#888", fontSize: 13, cursor: "pointer", transition: "all 0.15s" }}
-            >
-              ♥ {d.btnLabel}
-            </button>
-            <p style={{ fontSize: 12, color: "#555", marginTop: 12 }}>© 2026 TetherDesk. All rights reserved.</p>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
-            <div>
-              <p style={{ fontSize: 12, color: "#888", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Product</p>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <Link href="/access" className="link-hover" style={fl()}>Remote</Link>
-                <Link href="/dashboard" className="link-hover" style={fl()}>Dashboard</Link>
-              </div>
-            </div>
-            <div>
-              <p style={{ fontSize: 12, color: "#888", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Resources</p>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <a href="https://github.com/wi5nuu/Tetherdesk" className="link-hover" style={fl()} target="_blank" rel="noopener noreferrer">GitHub</a>
-                <Link href="/docs" className="link-hover" style={fl()}>{n.docs}</Link>
-                <a href="https://github.com/wi5nuu/Tetherdesk/discussions" className="link-hover" style={fl()} target="_blank" rel="noopener noreferrer">Community</a>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 32, paddingTop: 24, borderTop: "1px solid #141414", flexWrap: "wrap", fontSize: 12, color: "#444" }}>
-          <span>{tr.footer.built}</span>
-          <div style={{ display: "flex", gap: 16, marginLeft: "auto" }}>
-            <a href="https://github.com/wi5nuu/Tetherdesk" className="link-hover" style={fl("#555")} target="_blank" rel="noopener noreferrer">GitHub</a>
-            <Link href="/docs" className="link-hover" style={fl("#555")}>{n.docs}</Link>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -466,7 +300,7 @@ export default function LandingPage() {
       <Features />
       <HowItWorks />
       <CliDemo />
-      <Footer onDonate={() => setShowDonate(true)} />
+      <Footer />
       {showDonate && <DonateModal onClose={() => setShowDonate(false)} />}
     </div>
   );

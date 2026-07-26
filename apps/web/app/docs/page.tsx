@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useLang } from "../../lib/lang-context";
+import { Navbar } from "../components/Navbar";
+import { Footer } from "../components/Footer";
 
 const s: Record<string, React.CSSProperties> = {
   page: {
@@ -23,13 +25,6 @@ const s: Record<string, React.CSSProperties> = {
   tocItemActive: { color: "#4ade80", borderLeft: "2px solid #4ade80", background: "#0a1a0f" },
   main: { flex: 1, minWidth: 0 },
   wrap: { maxWidth: 820 },
-  header: {
-    borderBottom: "1px solid #141414", padding: "16px 0", marginBottom: 40,
-    display: "flex", alignItems: "center", justifyContent: "space-between",
-  },
-  logo: { fontWeight: 700, fontSize: 18, color: "#4ade80", textDecoration: "none" },
-  nav: { display: "flex", gap: 20, fontSize: 14, color: "#888" },
-  navLink: { color: "#888", textDecoration: "none", cursor: "pointer", transition: "color 0.15s", padding: "4px 8px", borderRadius: 6 },
   hero: { padding: "40px 0", textAlign: "center" as const },
   h1: { fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 16, lineHeight: 1.1 },
   sub: { fontSize: 16, color: "#999", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 },
@@ -114,10 +109,6 @@ function CodeBlock({ children }: { children: string }) {
   );
 }
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return <Link href={href} className="link-landing" style={s.navLink}>{children}</Link>;
-}
-
 export default function DocsPage() {
   const { tr } = useLang();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -160,15 +151,7 @@ export default function DocsPage() {
 
   return (
     <div style={s.page}>
-      <header style={{ ...s.header, maxWidth: 1200, margin: "0 auto", padding: "16px 24px", marginBottom: 0, borderBottom: "1px solid #141414" }}>
-        <Link href="/" style={s.logo}>TetherDesk</Link>
-        <div style={s.nav}>
-          <NavLink href="/">Home</NavLink>
-          <NavLink href="/access">Access</NavLink>
-          <NavLink href="/dashboard">{d.dashboard}</NavLink>
-        </div>
-      </header>
-
+      <Navbar />
       <div className="docs-hero" style={s.hero}>
         <h1 style={s.h1}>{d.heroTitle}</h1>
         <p style={s.sub}>{d.heroSub}</p>
@@ -674,15 +657,7 @@ Signaling connected
           </div>
         </section>
 
-        <div style={s.footer}>
-          <p>TetherDesk — {d.docs}</p>
-          <div style={{ marginTop: 8, display: "flex", justifyContent: "center", gap: 20 }}>
-            <Link href="/" className="link-landing" style={{ color: "#555", textDecoration: "none" }}>{d.home}</Link>
-            <Link href="/access" className="link-landing" style={{ color: "#555", textDecoration: "none" }}>Access</Link>
-            <Link href="/dashboard" className="link-landing" style={{ color: "#555", textDecoration: "none" }}>{d.dashboard}</Link>
-            <a href="https://github.com/wi5nuu/Tetherdesk" className="link-landing" style={{ color: "#555", textDecoration: "none" }} target="_blank" rel="noopener noreferrer">GitHub</a>
-          </div>
-        </div>
+        <Footer />
       </div>
     </div>
   </div>

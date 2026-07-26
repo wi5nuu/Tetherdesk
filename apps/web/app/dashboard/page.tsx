@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { generateX25519KeyPair, toBase64Url } from "@tetherdesk/crypto";
 import { useToast } from "../../lib/toast";
 import { useLang } from "../../lib/lang-context";
-import { LangSwitcher } from "../components/LangSwitcher";
+import { Navbar } from "../components/Navbar";
+import { Footer } from "../components/Footer";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -380,6 +381,7 @@ export default function HomePage() {
 
   return (
     <div style={s.root}>
+      <Navbar />
       {/* Approval modal */}
       {showApprovalModal && pendingSessionId && (
           <div
@@ -447,8 +449,9 @@ export default function HomePage() {
         onClick={() => setSidebarOpen(false)}
       />
 
-      {/* Sidebar */}
-      <nav className={`dashboard-sidebar ${sidebarOpen ? 'dashboard-sidebar-open' : ''}`} style={s.sidebar} aria-label="TetherDesk navigation">
+      <div style={{ display: "flex", flex: 1 }}>
+        {/* Sidebar */}
+        <nav className={`dashboard-sidebar ${sidebarOpen ? 'dashboard-sidebar-open' : ''}`} style={s.sidebar} aria-label="TetherDesk navigation">
         <div style={s.sidebarTop}>
           <div style={s.logo}>
             <span style={s.logoMark}>TD</span>
@@ -504,7 +507,6 @@ export default function HomePage() {
             </p>
           </div>
           <div style={s.headerRight}>
-            <LangSwitcher />
             <span
               style={{
                 ...s.pill,
@@ -867,6 +869,8 @@ export default function HomePage() {
           </div>
         </div>
       </main>
+      </div>
+      <Footer />
     </div>
   );
 }
@@ -878,6 +882,7 @@ export default function HomePage() {
 const s: Record<string, React.CSSProperties> = {
   root: {
     display: "flex",
+    flexDirection: "column",
     minHeight: "100vh",
     backgroundColor: "#080808",
     color: "#e0e0e0",

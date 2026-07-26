@@ -4,7 +4,8 @@ import { useState, useCallback, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLang } from "../../lib/lang-context";
-import { LangSwitcher } from "../components/LangSwitcher";
+import { Navbar } from "../components/Navbar";
+import { Footer } from "../components/Footer";
 
 type KeyPhase =
   | { phase: "input" }
@@ -93,11 +94,7 @@ export default function AccessPage() {
 
   return (
     <div className="access-container" style={s.page}>
-      {/* Language switcher top-right */}
-      <div style={{ position: "fixed", top: 16, right: 16, zIndex: 50 }}>
-        <LangSwitcher />
-      </div>
-
+      <Navbar />
       <div style={s.card}>
         <div style={s.logo}>{a.title}</div>
         <div style={s.version}>
@@ -201,13 +198,7 @@ export default function AccessPage() {
         </div>
       </div>
 
-      <div style={s.footer}>
-        <Link href="/" className="link-landing" style={s.link}>{a.home}</Link>
-        <span style={{ color: "#333" }}>·</span>
-        <Link href="/dashboard" className="link-landing" style={s.link}>Dashboard</Link>
-        <span style={{ color: "#333" }}>·</span>
-        <a href="https://github.com/wi5nuu/Tetherdesk#readme" className="link-landing" style={s.link} target="_blank" rel="noopener noreferrer">{a.docs}</a>
-      </div>
+      <Footer />
     </div>
   );
 }
