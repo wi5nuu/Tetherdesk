@@ -56,7 +56,11 @@ function extractJson(raw: string): string {
 function base64urlDecode(b64url: string): string {
   const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
   const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
-  return atob(padded);
+  try {
+    return atob(padded);
+  } catch {
+    throw new TypeError("malformed pairing QR payload: invalid base64url");
+  }
 }
 
 /** Parse a JSON string and validate the required fields. */

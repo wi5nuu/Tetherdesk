@@ -49,4 +49,8 @@ describe("PairingQrPayload codec", () => {
   it("throws on a URL with no /pair/ path", () => {
     expect(() => decodePairingQrPayload("https://example.vercel.app/other")).toThrow(TypeError);
   });
+
+  it("throws on invalid base64url data", () => {
+    expect(() => decodePairingQrPayload("invalid_base64!@#")).toThrow(TypeError);
+  });
 });
