@@ -8,6 +8,7 @@ function char(sextet: number): string {
   return BASE64URL_CHARS[sextet & 0x3f]!;
 }
 
+/** Encode a Uint8Array into a base64url string. */
 export function toBase64Url(bytes: Uint8Array): string {
   let result = "";
   let i = 0;
@@ -26,6 +27,7 @@ export function toBase64Url(bytes: Uint8Array): string {
   return result;
 }
 
+/** Decode a base64url string into a Uint8Array. Throws TypeError if the string is invalid. */
 export function fromBase64Url(encoded: string): Uint8Array {
   if (!/^[A-Za-z0-9\-_]*$/.test(encoded)) {
     throw new TypeError(`invalid base64url string: ${encoded}`);

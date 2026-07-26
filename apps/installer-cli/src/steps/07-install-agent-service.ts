@@ -47,13 +47,22 @@ function batchEscape(value: string): string {
 export async function step07InstallAgentService(state: InitState): Promise<void> {
   await mkdir(LOGS_DIR, { recursive: true });
 
+  let validOrigin = "";
+  if (state.backendOrigin) {
+    try {
+      validOrigin = new URL(state.backendOrigin).origin;
+    } catch {
+      throw new Error(`Invalid backendOrigin URL format: ${state.backendOrigin}`);
+    }
+  }
+
   // Persist the backend origin and agent secret for the agent to use
   const configPath = join(AGENT_DIR, "config.json");
   await writeFile(
     configPath,
     JSON.stringify(
       {
-        backendOrigin: state.backendOrigin ?? "",
+        backendOrigin: validOrigin,
         ...(state.agentSecret ? { agentSecret: state.agentSecret } : {}),
       },
       null,

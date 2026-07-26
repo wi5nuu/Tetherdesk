@@ -56,7 +56,7 @@ program
     try {
       await runStart(options);
     } catch (err) {
-      console.error(pc.red("\nFailed to start:"), err instanceof Error ? err.message : String(err));
+      console.error(pc.red("\nError:"), err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
   });
@@ -74,7 +74,7 @@ program
       console.log(pc.yellow("\nThe agent will display a QR code in its terminal output."));
       console.log(pc.yellow("Run 'tetherdesk logs' to view it if the agent is running as a background service.\n"));
     } catch (err) {
-      console.error(pc.red("\nFailed to start pairing session:"), err instanceof Error ? err.message : String(err));
+      console.error(pc.red("\nError:"), err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
   });
@@ -170,7 +170,7 @@ Example:
         console.log(pc.green(`✓ ${key} set to ${value}`));
       }
     } catch (err) {
-      console.error(pc.red("Config error:"), err instanceof Error ? err.message : String(err));
+      console.error(pc.red("Error:"), err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
   });

@@ -10,6 +10,7 @@ vi.mock("@/lib/redis", () => ({
     get: vi.fn((key: string) => Promise.resolve(mockRedisStore[key] ?? null)),
     del: vi.fn((key: string) => { delete mockRedisStore[key]; return Promise.resolve(1); }),
     hget: vi.fn(() => Promise.resolve(null)),
+    eval: vi.fn(() => Promise.resolve(0)),
   })),
 }));
 

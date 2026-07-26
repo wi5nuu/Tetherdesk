@@ -1,6 +1,7 @@
 import type { NextRequest, NextResponse } from "next/server";
 import { ErrorCode, type ApiResponse, type SignalingPayload } from "@tetherdesk/protocol";
-import { jsonError, jsonOk, parseJsonBody } from "@/lib/http";
+import { jsonError, jsonOk, parseJsonBody, getClientIp } from "@/lib/http";
+import { checkPollingRateLimit } from "@/lib/rateLimit";
 import { signalPollQuerySchema } from "@/lib/validation";
 import { authenticateRequest } from "@/lib/auth";
 import { drainMailbox, pushToMailbox } from "@/lib/mailbox";
@@ -11,6 +12,12 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<SignalingPayload[]>>> {
+  const ip = getClientIp(request);
+  const rateLimit = await checkPollingRateLimit(ip);
+  if (!rateLimit.allowed) {
+    return jsonError(ErrorCode.RATE_LIMITED, "Too many requests");
+  }
+
   const auth = await authenticateRequest(request);
   if (!auth.ok) {
     return jsonError(ErrorCode.UNAUTHORIZED, "invalid or missing bearer token");

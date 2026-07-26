@@ -2,7 +2,11 @@
  * so Vercel preview deployments can use a `preview:` prefix and never touch the production
  * mailbox/session namespace (Section 16.3). */
 function namespace(): string {
-  return process.env["TETHERDESK_KEY_NAMESPACE"] ?? "td";
+  const ns = process.env["TETHERDESK_KEY_NAMESPACE"];
+  if (ns && /^[a-zA-Z0-9_-]+$/.test(ns)) {
+    return ns;
+  }
+  return "td";
 }
 
 export const redisKeys = {

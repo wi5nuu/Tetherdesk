@@ -63,6 +63,17 @@ export async function vercelFetch(
     });
     
     clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      try {
+        const cloned = response.clone();
+        const errorBody = await cloned.text();
+        console.error(`\n[vercelFetch] Error ${response.status} on ${path}: ${errorBody}`);
+      } catch {
+        console.error(`\n[vercelFetch] Error ${response.status} on ${path} (failed to read body)`);
+      }
+    }
+    
     return response;
   } catch (err) {
     // Provide user-friendly error messages for common network issues

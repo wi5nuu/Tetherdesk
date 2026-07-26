@@ -7,6 +7,7 @@ export interface X25519KeyPair {
   publicKey: Uint8Array;
 }
 
+/** Generate a new X25519 keypair for ECDH. */
 export function generateX25519KeyPair(): X25519KeyPair {
   const { secretKey, publicKey } = x25519.keygen();
   return { secretKey, publicKey };

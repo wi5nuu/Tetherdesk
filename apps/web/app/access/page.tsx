@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useLang } from "../../lib/lang-context";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
+import { APP_VERSION } from "../../lib/constants";
 
 type KeyPhase =
   | { phase: "input" }
@@ -102,7 +103,7 @@ export default function AccessPage() {
         <div style={s.card}>
           <div style={s.logo}>{a.title}</div>
           <div style={s.version}>
-            <span style={{ color: "#4ade80" }}>●</span> v2.1.28
+            <span style={{ color: "#4ade80" }}>●</span> v{APP_VERSION}
           </div>
           <p style={s.sub}>{a.subtitle}</p>
 

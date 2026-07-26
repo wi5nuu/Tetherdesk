@@ -9,3 +9,4 @@ export const RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
 export const RATE_LIMIT_MAX_ATTEMPTS = process.env.NODE_ENV === "development" ? 100 : 30;
 export const REVOCATION_TTL_SECONDS = 30 * 24 * 60 * 60;
 export const SESSION_BEARER_TOKEN_TTL_SECONDS = 24 * 60 * 60;
+export const APP_VERSION = "2.1.28";

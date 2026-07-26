@@ -843,6 +843,8 @@ export class TetherDeskAgent {
       });
     });
 
+    this.ipcServer.maxConnections = 5;
+
     await new Promise<void>((resolve, reject) => {
       this.ipcServer!.listen(path, () => resolve());
       this.ipcServer!.on("error", reject);

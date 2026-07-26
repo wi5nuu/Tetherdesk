@@ -23,13 +23,18 @@ end
 return count
 `;
 
-export async function checkRateLimit(key: string, failOpen: boolean): Promise<RateLimitResult> {
+export async function checkRateLimit(
+  key: string,
+  failOpen: boolean,
+  maxAttempts = RATE_LIMIT_MAX_ATTEMPTS,
+  windowSeconds = RATE_LIMIT_WINDOW_SECONDS
+): Promise<RateLimitResult> {
   const redis = getRedis();
   try {
     const count = (await redis.eval(
       RATE_LIMIT_LUA,
       [key],
-      [String(RATE_LIMIT_WINDOW_SECONDS)],
+      [String(windowSeconds)],
     )) as number;
     
     // Validate Lua script return value
@@ -38,8 +43,8 @@ export async function checkRateLimit(key: string, failOpen: boolean): Promise<Ra
     }
     
     return {
-      allowed: count <= RATE_LIMIT_MAX_ATTEMPTS,
-      remaining: Math.max(0, RATE_LIMIT_MAX_ATTEMPTS - count),
+      allowed: count <= maxAttempts,
+      remaining: Math.max(0, maxAttempts - count),
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -52,7 +57,7 @@ export async function checkRateLimit(key: string, failOpen: boolean): Promise<Ra
       // whenever Redis is momentarily unavailable, which is worse than the
       // marginal increase in brute-force surface. Fail open so pairing can
       // proceed; the single-use token and 90s TTL are the primary guards.
-      return { allowed: true, remaining: RATE_LIMIT_MAX_ATTEMPTS };
+      return { allowed: true, remaining: maxAttempts };
     }
     // Fail closed for /confirm — it's the highest-value endpoint (completes
     // pairing), so denying on Redis unavailability is the safer default.
@@ -76,4 +81,13 @@ export async function checkPairingStartRateLimit(ip: string): Promise<RateLimitR
  */
 export async function checkPairingConfirmRateLimit(ip: string): Promise<RateLimitResult> {
   return checkRateLimit(redisKeys.rateLimitPairConfirm(ip), false);
+}
+/**
+ * Rate limiter for polling endpoints like `/api/pairing/active-qr` or `/api/signal/poll`.
+ * Allows 100 requests per 60 seconds per IP.
+ * Fails OPEN on Redis unavailability to avoid breaking polling loops.
+ */
+export async function checkPollingRateLimit(ip: string): Promise<RateLimitResult> {
+  // Use a separate namespace for polling to avoid clashing with start/confirm
+  return checkRateLimit(`td:rate_limit:poll:${ip}`, true, 100, 60);
 }

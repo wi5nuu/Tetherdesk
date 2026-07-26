@@ -50,6 +50,7 @@ export async function aeadEncrypt(
   return { ciphertext, iv };
 }
 
+/** Decrypt an AES-256-GCM ciphertext created by aeadEncrypt. */
 export async function aeadDecrypt(
   key: CryptoKey,
   sealed: AeadSealed,

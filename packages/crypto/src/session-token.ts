@@ -13,6 +13,7 @@ const DEFAULT_TTL_SECONDS = 24 * 60 * 60;
 const MIN_TTL_SECONDS = 60; // 1 minute minimum
 const MAX_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days maximum
 
+/** Sign a session token JWT for a specific role and session. */
 export async function signSessionToken(
   claims: SessionTokenClaims,
   signingSecret: Uint8Array,
@@ -34,6 +35,7 @@ export async function signSessionToken(
 
 export class SessionTokenInvalidError extends Error {}
 
+/** Verify a session token JWT and extract its claims. Throws SessionTokenInvalidError if invalid. */
 export async function verifySessionToken(
   token: string,
   signingSecret: Uint8Array,

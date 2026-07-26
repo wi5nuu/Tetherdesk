@@ -105,7 +105,7 @@ program
       setInterval(() => {}, 30_000);
     } catch (error) {
       console.error(
-        "Failed to start agent:",
+        "Error:",
         error instanceof Error ? error.message : String(error),
       );
       process.exit(1);
@@ -132,7 +132,7 @@ program
         console.log(`Last heartbeat: ${status.lastHeartbeatAt}`);
       }
     } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err));
+      console.error("Error:", err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
   });
@@ -149,7 +149,7 @@ program
       console.log(`Pairing started — session ${result.sessionId}`);
       console.log("The agent will display a QR code in its terminal output.");
     } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err));
+      console.error("Error:", err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
   });
@@ -174,7 +174,7 @@ program
         console.log(`  ${d.id}  ${d.displayName}${revoked}${lastSeen}`);
       }
     } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err));
+      console.error("Error:", err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
   });
@@ -190,7 +190,7 @@ program
       await revokeDevice(deviceId);
       console.log(`Device ${deviceId} revoked.`);
     } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err));
+      console.error("Error:", err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
   });
@@ -206,7 +206,7 @@ program
       await stopAgent();
       console.log("Agent stopped.");
     } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err));
+      console.error("Error:", err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
   });

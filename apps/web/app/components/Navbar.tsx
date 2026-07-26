@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLang } from "../../lib/lang-context";
 
-const APP_VERSION = "2.1.28";
+import { APP_VERSION } from "../../lib/constants";
 
 export type NavbarVariant = "landing" | "default";
 
