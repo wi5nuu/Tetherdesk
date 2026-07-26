@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRedis } from "@/lib/redis";
+import { redisKeys } from "@/lib/keys";
 import { verifyAgentSecret } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/http";
 
@@ -15,13 +16,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const body = await parseJsonBody(request) as { pairingUrl?: string; expiresAt?: number; pairingToken?: string; laptopJwt?: string } | undefined;
+  const body = await parseJsonBody(request) as { pairingUrl?: string; expiresAt?: number; pairingToken?: string } | undefined;
   if (!body || !body.pairingUrl || !body.expiresAt) {
     return NextResponse.json({ ok: false, error: "invalid or missing pairingUrl/expiresAt" }, { status: 400 });
   }
 
   const redis = getRedis();
-  await redis.set(ACTIVE_QR_KEY, JSON.stringify({ pairingUrl: body.pairingUrl, expiresAt: body.expiresAt, pairingToken: body.pairingToken ?? null, laptopJwt: body.laptopJwt ?? null }), { ex: ACTIVE_QR_TTL });
+  await redis.set(ACTIVE_QR_KEY, JSON.stringify({ pairingUrl: body.pairingUrl, expiresAt: body.expiresAt, pairingToken: body.pairingToken ?? null }), { ex: ACTIVE_QR_TTL });
 
   return NextResponse.json({ ok: true });
 }
@@ -34,7 +35,7 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({ ok: false, error: "no active QR" }, { status: 404 });
   }
 
-  const data = typeof raw === "string" ? JSON.parse(raw) as { pairingUrl: string; expiresAt: number } : raw as { pairingUrl: string; expiresAt: number };
+  const data = typeof raw === "string" ? JSON.parse(raw) as { pairingUrl: string; expiresAt: number; pairingToken?: string } : raw as { pairingUrl: string; expiresAt: number; pairingToken?: string };
 
   // Already expired?
   if (data.expiresAt < Date.now()) {
@@ -42,5 +43,21 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({ ok: false, error: "QR expired" }, { status: 404 });
   }
 
-  return NextResponse.json({ ok: true, data });
+  // Dynamically resolve laptopJwt from session record via pairingToken
+  // (Section 10.6) — this works regardless of agent version because the
+  // backend stores laptopJwt during POST /api/pairing/start.
+  let laptopJwt: string | undefined;
+  if (data.pairingToken) {
+    try {
+      const pairRecord = await redis.hgetall<Record<string, string>>(redisKeys.pairing(data.pairingToken));
+      const sessionId = pairRecord?.sessionId;
+      if (sessionId) {
+        laptopJwt = await redis.hget<string>(redisKeys.session(sessionId), "laptopJwt") ?? undefined;
+      }
+    } catch {
+      // Non-fatal — laptopJwt is a best-effort optimization
+    }
+  }
+
+  return NextResponse.json({ ok: true, data: { ...data, laptopJwt } });
 }
