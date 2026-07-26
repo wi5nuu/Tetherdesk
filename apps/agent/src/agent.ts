@@ -9,7 +9,6 @@ import {
 } from "@tetherdesk/crypto";
 import type { PairingQrPayload, ApiResponse, SignalingPayload, ControlMessage } from "@tetherdesk/protocol";
 import { decodeInputEvent } from "@tetherdesk/protocol";
-import { renderQrToTerminal } from "./qr/render.js";
 import { AgentMailbox } from "./signaling/mailbox.js";
 import { WebSocketTransport, PollingTransport } from "./signaling/client.js";
 import { AgentPeer, DEFAULT_STUN_SERVERS } from "./webrtc/peer.js";
@@ -179,7 +178,6 @@ export class TetherDeskAgent {
   async initialize(): Promise<void> {
     this.identityKeyPair = await loadOrCreateIdentityKeyPair();
     await this._startIPCServer();
-    console.log("Agent initialized with persistent identity keypair");
     void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "success", stage: "agent", message: "Agent initialized — ready to pair" });
   }
 
@@ -242,11 +240,6 @@ export class TetherDeskAgent {
       laptopEphemeralPubKey: toBase64Url(ephemeralKeyPair.publicKey),
     };
 
-    console.log("\n=== TetherDesk Pairing ===");
-    console.log("Scan this QR code with your phone:\n");
-    void renderQrToTerminal(qrPayload);
-    console.log(`\nSession ID: ${sessionId}`);
-    console.log(`Pairing token expires in 90 seconds.\n`);
     void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "info", stage: "pairing", message: "QR code generated — waiting for phone to scan", sessionId });
 
     // Register the pairing URL with the backend so the web page can display
@@ -337,7 +330,7 @@ export class TetherDeskAgent {
     if (wsProbeOk) {
       transport = new WebSocketTransport();
     } else {
-      console.log("WebSocket failed — falling back to long-poll signaling");
+      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "info", stage: "agent", message: "WebSocket unavailable — using long-poll signaling" });
       const pollingTransport = new PollingTransport();
       // BUG-A-POLLING-SID: sessionId is set earlier in startPairing() before
       // _connectSignaling() is called. Guard here just in case the call order
@@ -361,12 +354,10 @@ export class TetherDeskAgent {
             ? "failed"
             : "disconnected";
 
-      if (state.status === "reconnecting") {
-        console.log(`Signaling reconnecting (attempt ${state.attempt}, retry in ${Math.round(state.nextRetryMs)}ms)…`);
+      if (state.status === "failed") {
+        void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "error", stage: "agent", message: `Signaling failed: ${state.reason}` });
       } else if (state.status === "connected") {
-        console.log("Signaling connected");
-      } else if (state.status === "failed") {
-        console.error(`Signaling failed: ${state.reason}`);
+        void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "info", stage: "agent", message: "Signaling connected" });
       }
     });
 
@@ -422,8 +413,6 @@ export class TetherDeskAgent {
             "tetherdesk/session-key/v1",
           );
 
-          console.log("\nPairing successful — shared session key derived");
-          console.log("Session key established (not shown for security)");
           void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "success", stage: "keyexchange", message: "Key exchange complete — secure session established", sessionId });
           resolve();
         } catch (err) {
@@ -464,13 +453,10 @@ export class TetherDeskAgent {
         signal: AbortSignal.timeout(5_000),
       });
     } catch {
-      // Non-fatal — if the backend is unreachable, proceed anyway (terminal-only mode)
-      console.warn("Could not register approval request — proceeding without web-UI gate.");
+      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "warn", stage: "approval", message: "Could not register approval request — proceeding without web-UI gate" });
       return;
     }
 
-    console.log("\nWaiting for approval on the laptop web UI…");
-    console.log(`Open the dashboard and click Allow to approve the connection.\n`);
     void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "info", stage: "approval", message: "Waiting for approval — check the dashboard", sessionId });
 
     // Poll the approval result endpoint (2s interval, 90s timeout)
@@ -504,8 +490,7 @@ export class TetherDeskAgent {
     });
 
     if (result === "declined") {
-      console.log("\nConnection declined. Starting a new pairing session…\n");
-      // Reset state so startPairing() guard allows re-entry
+      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "warn", stage: "approval", message: "Connection declined — starting new pairing session", ...(this.sessionId && { sessionId: this.sessionId }) });
       this.signalingState = "idle";
       await this.stop();
       // Brief pause so the backend can clean up the old session
@@ -513,9 +498,9 @@ export class TetherDeskAgent {
       return this.startPairing();
     }
     if (result === "timeout") {
-      console.warn("Approval timed out — proceeding anyway (auto-approved after 90s).");
+      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "warn", stage: "approval", message: "Approval timed out — proceeding anyway (auto-approved)" });
     } else {
-      console.log("Approved — starting remote control session.");
+      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "success", stage: "approval", message: "Connection approved — starting remote control session" });
     }
   }
 
@@ -524,7 +509,6 @@ export class TetherDeskAgent {
   // -------------------------------------------------------------------------
 
   private async _startWebRTC(): Promise<void> {
-    console.log("\nStarting WebRTC — initializing screen capture…");
     void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "info", stage: "webrtc", message: "Starting WebRTC — initializing screen capture", ...(this.sessionId && { sessionId: this.sessionId }) });
 
     // Build ICE server list (Section 12.3 / 12.4)
@@ -548,14 +532,10 @@ export class TetherDeskAgent {
       await capture.initialize();
       this.screenCapture = capture;
       resolution = await capture.getResolution();
-      console.log(`Screen resolution: ${resolution.width}x${resolution.height}`);
+      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "info", stage: "webrtc", message: `Screen resolution: ${resolution.width}x${resolution.height}` });
       videoStream = await capture.start();
     } catch (err) {
-      console.warn(
-        "Screen capture initialization failed (Phase 2 native module not yet available):",
-        err instanceof Error ? err.message : String(err),
-      );
-      console.warn("Proceeding without screen video — install the Phase 2 native addon for full support.");
+      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "warn", stage: "webrtc", message: `Screen capture unavailable: ${err instanceof Error ? err.message : String(err)}` });
     }
 
     // Read first frame to get a MediaStreamTrack-compatible source.
@@ -607,16 +587,9 @@ export class TetherDeskAgent {
           reader.releaseLock();
         }
       })().catch((err: unknown) => {
-        console.error("Frame pump error:", err instanceof Error ? err.message : String(err));
+        void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "error", stage: "webrtc", message: `Frame pump error: ${err instanceof Error ? err.message : String(err)}` });
       });
     } catch (err) {
-      // @roamhq/wrtc not installed or RTCVideoSource not available —
-      // proceed without video track; data channel (input) still works.
-      console.warn("Could not create video track:", err instanceof Error ? err.message : String(err));
-      console.warn("Proceeding without screen video — install @roamhq/wrtc for full support.");
-      // BUG-A3: null as unknown as MediaStreamTrack is an unsafe cast that
-      // confuses downstream code. Use null instead and handle it at the call
-      // site in createOffer (which already has the videoTrack null-check).
       videoTrack = null;
     }
 
@@ -628,11 +601,7 @@ export class TetherDeskAgent {
     try {
       await this.inputInjector.initialize();
     } catch (err) {
-      console.warn(
-        "Input injector initialization failed (Phase 2 native module not yet available):",
-        err instanceof Error ? err.message : String(err),
-      );
-      console.warn("Proceeding without input injection — install the Phase 2 native addon for full support.");
+      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "warn", stage: "agent", message: `Input injection unavailable: ${err instanceof Error ? err.message : String(err)}` });
       this.inputInjector = null;
     }
 
@@ -646,16 +615,11 @@ export class TetherDeskAgent {
           candidate: candidate.candidate ?? "",
           sdpMid: candidate.sdpMid ?? null,
           sdpMLineIndex: candidate.sdpMLineIndex ?? null,
-        }).catch((err: unknown) => {
-          console.warn("Failed to send ICE candidate:", err instanceof Error ? err.message : String(err));
-        });
+        }).catch(() => { /* ICE failure — best-effort */ });
       },
       onConnectionStateChange: (state) => {
-        console.log(`WebRTC connection state: ${state}`);
         if (state === "connected") {
-          console.log("WebRTC peer connected — remote control active");
           void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "success", stage: "connection", message: "Phone connected — remote control is now active", ...(this.sessionId && { sessionId: this.sessionId }) });
-          // Send resolution so the phone can scale its control surface correctly
           void this._sendControlMessage({
             t: "resolutionChanged",
             width: resolution.width,
@@ -666,10 +630,8 @@ export class TetherDeskAgent {
           const msg = noTurn
             ? "WebRTC connection failed — no TURN relay configured."
             : "WebRTC connection failed — check TURN credentials.";
-          console.error(msg);
           void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "error", stage: "webrtc", message: msg, ...(this.sessionId && { sessionId: this.sessionId }) });
         } else if (state === "disconnected") {
-          console.log("WebRTC disconnected — waiting for reconnect…");
           void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "warn", stage: "connection", message: "Phone disconnected — waiting for reconnect", ...(this.sessionId && { sessionId: this.sessionId }) });
         }
       },
@@ -686,8 +648,6 @@ export class TetherDeskAgent {
       // No video track — create offer for data channel only
       offer = await this.peer.createOfferDataOnly();
     }
-
-    console.log("Sending SDP offer to phone via signaling…");
 
     // Relay the offer to the phone via signaling mailbox
     await this.mailbox!.send("phone", {
@@ -713,18 +673,13 @@ export class TetherDeskAgent {
         void this.peer?.applyAnswer({
           type: "answer",
           sdp: payload.sdp,
-        }).catch((err: unknown) => {
-          console.error("Failed to apply SDP answer:", err instanceof Error ? err.message : String(err));
-        });
+        }).catch(() => { /* SDP answer — best-effort */ });
       } else if (payload.t === "ice-candidate") {
         void this.peer?.addIceCandidate({
           candidate: payload.candidate,
           sdpMid: payload.sdpMid ?? null,
           sdpMLineIndex: payload.sdpMLineIndex ?? null,
-        }).catch((err: unknown) => {
-          // ICE candidate errors are common and mostly benign — log but don't throw
-          console.debug("ICE candidate error (usually benign):", err instanceof Error ? err.message : String(err));
-        });
+        }).catch(() => { /* ICE candidate — best-effort */ });
       }
     };
 
@@ -776,7 +731,7 @@ export class TetherDeskAgent {
             this.lastHeartbeatAt = Date.now();
             void this._sendControlMessage({ t: "heartbeat", ts: this.lastHeartbeatAt });
           } else if (msg.t === "clipboard") {
-            console.log("Clipboard sync received (platform support varies)");
+            void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "info", stage: "system", message: "Clipboard sync received" });
           }
           return;
         } catch {
@@ -790,7 +745,7 @@ export class TetherDeskAgent {
       // BUG-1: use the singleton injector, not a new instance per message
       const injector = this.inputInjector;
       if (!injector) {
-        console.warn("InputInjector not initialized — dropping input event");
+        void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "warn", stage: "system", message: "InputInjector not initialized — dropping input event" });
         return;
       }
       switch (event.t) {
@@ -855,7 +810,7 @@ export class TetherDeskAgent {
         buf += chunk.toString();
         // H007: Prevent DoS via huge IPC messages
         if (buf.length > 100_000) {
-          console.error(`IPC buffer too large (${buf.length} bytes), resetting`);
+          void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "error", stage: "system", message: `IPC buffer overflow (${buf.length} bytes)` });
           buf = "";
           socket.destroy();
           return;
@@ -909,7 +864,7 @@ export class TetherDeskAgent {
 
         case "pair":
           void this.startPairing().catch((err: unknown) =>
-            console.error("Pairing error:", err instanceof Error ? err.message : String(err)),
+            void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "error", stage: "system", message: `Pairing error: ${err instanceof Error ? err.message : String(err)}` }),
           );
           return { id: req.id, result: { sessionId: this.sessionId } };
 

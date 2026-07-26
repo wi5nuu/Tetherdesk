@@ -17,8 +17,11 @@ const s: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100dvh", background: "#0a0a0a", color: "#e0e0e0",
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-    padding: "0 var(--page-padding)", width: "100%",
+    display: "flex", flexDirection: "column", width: "100%",
+  },
+  main: {
+    flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+    padding: "24px var(--page-padding)",
   },
   card: {
     width: "min(400px, 100%)", background: "#111",
@@ -95,109 +98,110 @@ export default function AccessPage() {
   return (
     <div className="access-container" style={s.page}>
       <Navbar />
-      <div style={s.card}>
-        <div style={s.logo}>{a.title}</div>
-        <div style={s.version}>
-          <span style={{ color: "#4ade80" }}>●</span> v2.1.27
-        </div>
-        <p style={s.sub}>{a.subtitle}</p>
+      <main style={s.main}>
+        <div style={s.card}>
+          <div style={s.logo}>{a.title}</div>
+          <div style={s.version}>
+            <span style={{ color: "#4ade80" }}>●</span> v2.1.27
+          </div>
+          <p style={s.sub}>{a.subtitle}</p>
 
-        <form onSubmit={handleSubmit}>
-          <label style={s.label}>{a.label}</label>
-          <input
-            type="text"
-            value={key}
-            onChange={(e) => { setKey(e.target.value); if (phase.phase === "error") setPhase({ phase: "input" }); }}
-            placeholder={a.placeholder}
-            disabled={phase.phase === "validating"}
-            autoFocus
-            autoComplete="one-time-code"
-            spellCheck={false}
-            style={{ ...s.input, ...(phase.phase === "error" ? s.inputError : {}) }}
-          />
-          {phase.phase === "error" && (
-            <p style={s.error}>{phase.message}</p>
-          )}
-
-          <label style={s.checkbox}>
+          <form onSubmit={handleSubmit}>
+            <label style={s.label}>{a.label}</label>
             <input
-              type="checkbox"
-              checked={remember}
-              onChange={(e) => setRemember(e.target.checked)}
-              style={{ accentColor: "#4ade80" }}
+              type="text"
+              value={key}
+              onChange={(e) => { setKey(e.target.value); if (phase.phase === "error") setPhase({ phase: "input" }); }}
+              placeholder={a.placeholder}
+              disabled={phase.phase === "validating"}
+              autoFocus
+              autoComplete="one-time-code"
+              spellCheck={false}
+              style={{ ...s.input, ...(phase.phase === "error" ? s.inputError : {}) }}
             />
-            {a.remember}
-          </label>
+            {phase.phase === "error" && (
+              <p style={s.error}>{phase.message}</p>
+            )}
 
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={!isValidKey || phase.phase === "validating"}
-            style={{ ...s.btn, ...(!isValidKey || phase.phase === "validating" ? s.btnDisabled : {}) }}
-          >
-            {phase.phase === "validating"
-              ? (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
-                  <span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid #0a0a0a", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
-                  {a.validating}
-                </span>
-              )
-              : a.connect}
-          </button>
-        </form>
+            <label style={s.checkbox}>
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                style={{ accentColor: "#4ade80" }}
+              />
+              {a.remember}
+            </label>
 
-        <div style={s.setup}>
-          <div style={{ fontWeight: 600, color: "#e0e0e0", marginBottom: 16 }}>{a.beforeTitle}</div>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={!isValidKey || phase.phase === "validating"}
+              style={{ ...s.btn, ...(!isValidKey || phase.phase === "validating" ? s.btnDisabled : {}) }}
+            >
+              {phase.phase === "validating"
+                ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
+                    <span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid #0a0a0a", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+                    {a.validating}
+                  </span>
+                )
+                : a.connect}
+            </button>
+          </form>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {/* Step 1 */}
-            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <span style={{ background: "#4ade80", color: "#0a0a0a", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>1</span>
-              <div>
-                <div style={{ fontSize: 13, color: "#e0e0e0", fontWeight: 500, marginBottom: 4 }}>{a.step1Title}</div>
-                <div style={s.setupCode}>{a.step1Code}</div>
-                <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>{a.step1Hint}</div>
-              </div>
-            </div>
+          <div style={s.setup}>
+            <div style={{ fontWeight: 600, color: "#e0e0e0", marginBottom: 16 }}>{a.beforeTitle}</div>
 
-            {/* Step 2 */}
-            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <span style={{ background: "#1a1a1a", color: "#4ade80", border: "1px solid #2a2a2a", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>2</span>
-              <div>
-                <div style={{ fontSize: 13, color: "#e0e0e0", fontWeight: 500, marginBottom: 2 }}>{a.step2Title}</div>
-                <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>
-                  <strong style={{ color: "#888" }}>{a.step2OptionA}</strong>{" "}
-                  <code style={{ color: "#4ade80", fontSize: 11, background: "#111", padding: "1px 5px", borderRadius: 3 }}>TD-XXXXXX</code>{" "}
-                  {a.step2OptionAHint}
-                </div>
-                <div style={{ fontSize: 12, color: "#666" }}>
-                  <strong style={{ color: "#888" }}>{a.step2OptionB}</strong>{" "}
-                  {a.step2OptionBHint1 && (
-                    <>
-                      <Link href="/dashboard" className="link-hover" style={{ color: "#4ade80", textDecoration: "none" }}>{a.step2OptionBHint1}</Link>{" "}
-                    </>
-                  )}
-                  {a.step2OptionBHint2}{" "}
-                  <strong style={{ color: "#888" }}>{a.step2OptionBHint3}</strong>{" "}
-                  {a.step2OptionBHint4}{" "}
-                  <code style={{ color: "#4ade80", fontSize: 11, background: "#111", padding: "1px 5px", borderRadius: 3 }}>sk-xxx</code>
-                  {a.step2OptionBHint5}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Step 1 */}
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <span style={{ background: "#4ade80", color: "#0a0a0a", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>1</span>
+                <div>
+                  <div style={{ fontSize: 13, color: "#e0e0e0", fontWeight: 500, marginBottom: 4 }}>{a.step1Title}</div>
+                  <div style={s.setupCode}>{a.step1Code}</div>
+                  <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>{a.step1Hint}</div>
                 </div>
               </div>
-            </div>
 
-            {/* Step 3 */}
-            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <span style={{ background: "#1a1a1a", color: "#4ade80", border: "1px solid #2a2a2a", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>3</span>
-              <div>
-                <div style={{ fontSize: 13, color: "#e0e0e0", fontWeight: 500, marginBottom: 2 }}>{a.step3Title}</div>
-                <div style={{ fontSize: 12, color: "#555" }}>{a.step3Hint}</div>
+              {/* Step 2 */}
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <span style={{ background: "#1a1a1a", color: "#4ade80", border: "1px solid #2a2a2a", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>2</span>
+                <div>
+                  <div style={{ fontSize: 13, color: "#e0e0e0", fontWeight: 500, marginBottom: 2 }}>{a.step2Title}</div>
+                  <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>
+                    <strong style={{ color: "#888" }}>{a.step2OptionA}</strong>{" "}
+                    <code style={{ color: "#4ade80", fontSize: 11, background: "#111", padding: "1px 5px", borderRadius: 3 }}>TD-XXXXXX</code>{" "}
+                    {a.step2OptionAHint}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    <strong style={{ color: "#888" }}>{a.step2OptionB}</strong>{" "}
+                    {a.step2OptionBHint1 && (
+                      <>
+                        <Link href="/dashboard" className="link-hover" style={{ color: "#4ade80", textDecoration: "none" }}>{a.step2OptionBHint1}</Link>{" "}
+                      </>
+                    )}
+                    {a.step2OptionBHint2}{" "}
+                    <strong style={{ color: "#888" }}>{a.step2OptionBHint3}</strong>{" "}
+                    {a.step2OptionBHint4}{" "}
+                    <code style={{ color: "#4ade80", fontSize: 11, background: "#111", padding: "1px 5px", borderRadius: 3 }}>sk-xxx</code>
+                    {a.step2OptionBHint5}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <span style={{ background: "#1a1a1a", color: "#4ade80", border: "1px solid #2a2a2a", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>3</span>
+                <div>
+                  <div style={{ fontSize: 13, color: "#e0e0e0", fontWeight: 500, marginBottom: 2 }}>{a.step3Title}</div>
+                  <div style={{ fontSize: 12, color: "#555" }}>{a.step3Hint}</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
+      </main>
       <Footer />
     </div>
   );

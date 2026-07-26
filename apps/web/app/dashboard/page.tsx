@@ -883,7 +883,8 @@ const s: Record<string, React.CSSProperties> = {
   root: {
     display: "flex",
     flexDirection: "column",
-    minHeight: "100vh",
+    minHeight: "100dvh",
+    width: "100%",
     backgroundColor: "#080808",
     color: "#e0e0e0",
     fontFamily:
