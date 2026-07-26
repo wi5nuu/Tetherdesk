@@ -11,21 +11,21 @@ TetherDesk lets you view and control your laptop screen from your phone across a
 ## Quick Start
 
 ```bash
-npx tetherdesk start
+npx tetherdesk
 ```
 
-This command:
+This single command:
 1. Starts the local agent on your laptop
-2. Generates a QR code in the terminal
-3. Creates a pairing session with 90-second expiry
-4. Waits for your phone to connect
+2. Shows a **QR code** in the terminal
+3. Displays an **access key** (`TD-XXXXXX`) in a box
+4. Creates a pairing session with 90-second expiry
 
-On your phone:
-- Scan the QR code with any camera app, or
-- Open the URL shown in the terminal, or
-- Visit the access page and enter the one-time key (TD-XXXXXX)
+**On your phone:**
+- Scan the QR code from the terminal, **or**
+- Open `https://tetherdesk-five.vercel.app/access` and enter the `TD-XXXXXX` key, **or**
+- Open the dashboard URL shown in the terminal
 
-When prompted on your laptop, click **Allow**. Your phone now displays your laptop screen. Tap to click, swipe to scroll, pinch to zoom.
+When prompted on your laptop, click **Allow**. Your phone now displays your laptop screen with a full control toolbar — zoom, keyboard input, modifier keys (Ctrl/Alt/Win), and special keys (Esc/Tab/Enter).
 
 ## How It Actually Works
 
@@ -91,31 +91,34 @@ When prompted on your laptop, click **Allow**. Your phone now displays your lapt
 
 TetherDesk supports two access methods:
 
-**1. One-Time Pairing Key (TD-XXXXXX)**
-- Generated when you run `npx tetherdesk start`
+**1. One-Time Pairing Key (`TD-XXXXXX`)**
+- Generated when you run `npx tetherdesk`
 - Displayed alongside the QR code in terminal
 - Valid for 90 seconds
-- Used for quick, temporary connections
-- Example: `TD-A3F2K9`
+- Single-use — consumed after connection
+- Example: `TD-IU5RqiQh9ZAz0fuQafWV7Q`
 
-**2. Persistent API Key (sk-xxx...)**
-- Generated from the dashboard at `/dashboard`
+**2. Persistent API Key (`sk-xxx...`)**
+- Generated from the dashboard
 - Format: `sk-` prefix + 32 hex characters
-- Stored in Redis until explicitly revoked
-- Used for repeat access without scanning QR every time
-- Example: `sk-a1b2c3d4e5f6...`
+- Never expires — use until revoked
+- Stored in browser via "Remember this key"
+- Example: `sk-a1b2c3d4e5f67890abcdef1234567890`
 
-Both key types trigger the same ECDH handshake, but persistent keys skip the ephemeral keypair generation step.
+Both key types trigger the same ECDH handshake.
 
 ## Requirements
 
 | Component | Requirement |
 |-----------|-------------|
-| **Laptop OS** | Windows 10/11, macOS 13+, Linux (X11/Wayland) |
+| **Laptop OS** | Windows 10/11, macOS 12+, Linux (x64, arm64) |
 | **Phone** | Any modern browser — iOS Safari 16+, Android Chrome 105+ |
-| **Node.js** | 20+ (only needed to run the agent; the agent itself is bundled) |
+| **Node.js** | 20+ |
+| **npm/pnpm** | npm 10+ or pnpm 9+ |
 | **Network** | Internet connection on both devices (can be different networks) |
 | **Cost** | $0 — runs on Vercel Hobby (free tier) + Upstash Redis (free tier) |
+
+No account, no credit card, no port forwarding. TetherDesk uses Cloudflare Tunnel for outbound-only connections.
 
 ## Installation
 
@@ -128,27 +131,27 @@ npm install -g tetherdesk
 Then run:
 
 ```bash
-tetherdesk start
+tetherdesk
 ```
 
 ### One-Time Use (No Install)
 
 ```bash
-npx tetherdesk start
+npx tetherdesk
 ```
 
-This downloads and runs the latest version without installing globally.
+This downloads and runs the latest version without installing globally. The CLI is bundled with all dependencies.
 
-## Commands
+## CLI Commands
 
-```bash
-tetherdesk start              # Start agent, show QR code
-tetherdesk status             # Show agent status
-tetherdesk logs               # Show agent logs (upcoming)
-tetherdesk config             # Show config file location
-tetherdesk devices            # List paired devices (upcoming)
-tetherdesk destroy            # Stop agent and delete config
-```
+| Command | Description |
+|---------|-------------|
+| `tetherdesk` | Start agent, show QR code + access key |
+| `tetherdesk config [key] [value]` | View/set configuration |
+| `tetherdesk pair` | Generate fresh access key (agent must be running) |
+| `tetherdesk status` | Check if agent is running |
+| `tetherdesk stop` | Stop agent and close all connections |
+| `tetherdesk logs` | Tail agent log file in real-time |
 
 ## Configuration
 
@@ -156,35 +159,33 @@ Agent stores config at `~/.tetherdesk/config.json`:
 
 ```json
 {
-  "backendOrigin": "https://your-vercel-deployment.vercel.app",
-  "agentSecret": "your-secret-key",
-  "turnServers": [...]
+  "backendOrigin": "https://tetherdesk-five.vercel.app",
+  "agentSecret": "your-secret-key"
 }
 ```
 
 **Do not share this file** — it contains credentials for your private backend.
 
-## Dashboard Features
+## Documentation
 
-Visit `/dashboard` on your backend URL to access:
+Full bilingual documentation (English + Indonesian) is available at:
 
-- **Live QR Code** — Refreshed every 90 seconds automatically
-- **One-Time Key Display** — The `TD-XXXXXX` key paired with current QR
-- **Approval Modal** — Popup when a phone attempts to connect
-- **Activity Log** — Real-time stream of pairing/WebRTC events via Server-Sent Events
-- **API Key Management** — Generate, copy, and revoke persistent API keys
-- **Agent Status** — Shows whether your local agent is running and connected
-- **Auto-Approve Toggle** — Automatically approve pairing requests (use with caution)
+- [https://tetherdesk-five.vercel.app/docs](https://tetherdesk-five.vercel.app/docs)
+
+Covers: Quick Start, Installation, Access Keys, Pairing Flow, Dashboard Guide, Troubleshooting, CLI Reference, and FAQ.
 
 ## Phone Client (PWA)
 
 The phone client runs at `/control` and provides:
 
-- **Touchscreen Controls** — Tap = mouse click, swipe = mouse drag, pinch = zoom
-- **Virtual Keyboard** — On-screen keyboard for text input
+- **Live Screen Stream** — Real-time laptop screen via WebRTC
+- **Touchscreen Controls** — Tap = mouse click, swipe = mouse drag
+- **Zoom Toggle** — Pinch-to-zoom or button toggle
+- **Keyboard Input** — On-screen text input field
+- **Modifier Keys** — Sticky Ctrl, Alt, Win keys
+- **Special Keys** — Esc, Tab, Enter, Backspace, Delete
 - **Landscape/Portrait** — Responsive layout adapts to phone orientation
-- **Add to Home Screen** — Install as PWA for full-screen experience
-- **Background Reconnect** — Automatically reconnects if connection drops
+- **Auto-Reconnect** — SSE-based reconnection on drop
 
 ## Backend Infrastructure
 
@@ -197,28 +198,6 @@ TetherDesk backend runs on:
 - Vercel Functions have HTTP-only endpoints (no WebSocket support), so the agent uses long-polling for signaling
 - Redis stores pairing tokens with automatic expiry (TTL)
 - Total cost: $0/month on free tiers for personal use
-
-## WebRTC Signaling
-
-Since Vercel doesn't support WebSocket, TetherDesk uses **long-polling** for signaling:
-
-```
-Agent → GET /api/signal/poll?sessionId=xxx (waits 25 seconds)
-       ← ICE candidate from phone
-
-Phone → POST /api/signal (sends ICE candidate)
-       → Agent receives via long-poll response
-```
-
-This adds ~1-2 seconds latency during initial connection, but once WebRTC P2P is established, signaling is no longer needed.
-
-## Platform Limitations
-
-These are not bugs — they are honest constraints:
-
-- **Signaling reconnects every ~30 seconds** — Vercel Functions have maximum lifetime. The agent and phone reconnect automatically and silently.
-- **Direct P2P works for most networks** — If both devices are behind symmetric NAT (rare in home/mobile networks), direct connection may fail. Enable TURN relay if needed.
-- **No persistent sessions across agent restarts** — Pairing keys expire when agent stops. Persistent API keys survive restarts.
 
 ## Deployment (Self-Hosted Backend)
 
@@ -240,31 +219,28 @@ To deploy your own TetherDesk backend:
    ```
 5. Update agent config to point to your Vercel URL:
    ```bash
-   tetherdesk config
-   # Edit backendOrigin to https://your-deployment.vercel.app
+   tetherdesk config backendOrigin https://your-deployment.vercel.app
    ```
 
-## Troubleshooting
+## FAQ
 
-### Agent won't start
-- Check Node.js version: `node --version` (must be 20+)
-- Check if port 3000 is already in use
-- Check logs: `tetherdesk logs` (upcoming)
+**Is my data encrypted?**
+Yes. X25519 ECDH + HKDF key agreement, DTLS-SRTP (AES-GCM 256) for WebRTC.
 
-### QR code won't scan
-- Make sure QR is not expired (90 seconds)
-- Try entering the `TD-XXXXXX` key manually at `/access`
-- Check if phone and laptop have internet connection
+**Do I need an account?**
+No. No account, registration, or personal info needed.
 
-### Connection fails after pairing
-- Check if both devices can reach the Vercel backend
-- Try enabling TURN relay (upcoming feature)
-- Check browser console for WebRTC errors
+**Do I need to open ports?**
+No. Cloudflare Tunnel creates an outbound-only connection. Works behind NAT, firewalls, and CGNAT.
 
-### Screen is black on phone
-- Make sure laptop agent is running (`tetherdesk status`)
-- Check if screen capture permission is granted (macOS/Windows)
-- Try restarting the agent
+**Works on iPhone and Android?**
+Yes. Browser-based PWA. Safari (iOS) and Chrome (Android).
+
+**Is there a mobile app?**
+PWA only. Add to Home Screen on Android (Chrome) or iOS (Safari Share).
+
+**Is TetherDesk open source?**
+Yes. MIT license on [GitHub](https://github.com/wi5nuu/Tetherdesk).
 
 ## Security Considerations
 
@@ -279,29 +255,12 @@ To deploy your own TetherDesk backend:
 - TetherDesk does not prevent screen recording on the phone
 - TetherDesk does not log or audit control actions (yet)
 
-**Threat Model:**
-- **Vercel backend compromise:** Attacker can see pairing tokens and ephemeral public keys, but cannot derive session keys or decrypt traffic
-- **Redis compromise:** Same as Vercel — public keys are useless without private keys
-- **MITM on pairing:** Attacker can intercept QR code, but cannot impersonate laptop without approval modal
-- **MITM on WebRTC:** WebRTC uses DTLS-SRTP, which is resistant to MITM if STUN/TURN servers are trusted
-
 ## Contributing
 
 TetherDesk is open source under MIT license. Contributions welcome:
 - Bug reports: https://github.com/wi5nuu/Tetherdesk/issues
 - Feature requests: https://github.com/wi5nuu/Tetherdesk/discussions
 - Pull requests: https://github.com/wi5nuu/Tetherdesk/pulls
-
-## Roadmap
-
-Planned features (not yet implemented):
-- [ ] Structured logging with log levels
-- [ ] `tetherdesk logs --tail` command
-- [ ] Semantic versioning + auto-update check
-- [ ] TURN relay configuration UI
-- [ ] Device management (revoke paired devices)
-- [ ] Session recording/playback
-- [ ] Multi-user approval (team access)
 
 ## License
 
@@ -315,5 +274,4 @@ Built with:
 - **Upstash Redis** — Serverless Redis for pairing data
 - **Cloudflare** — TURN/STUN servers
 - **X25519/AES-GCM** — Cryptographic primitives
-
-Special thanks to the open-source community for the libraries that made this possible.
+- **@roamhq/wrtc** — WebRTC native bindings for Node.js agent
