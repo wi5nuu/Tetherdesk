@@ -73,20 +73,20 @@ export async function step07InstallAgentService(state: InitState): Promise<void>
 
   switch (process.platform) {
     case "darwin":
-      await installMacosService(state);
+      await installMacosService(state, validOrigin);
       break;
     case "win32":
-      await installWindowsService(state);
+      await installWindowsService(state, validOrigin);
       break;
     case "linux":
-      await installLinuxService(state);
+      await installLinuxService(state, validOrigin);
       break;
     default:
       throw new Error(`Unsupported platform for service installation: ${process.platform}`);
   }
 }
 
-async function installMacosService(state: InitState): Promise<void> {
+async function installMacosService(state: InitState, validOrigin: string): Promise<void> {
   const agentBin = process.execPath; // path to node binary running this installer
   // BUG-FF: mkdir LaunchAgents directory — it may not exist on a fresh macOS install
   // (e.g. a new user account that has never had any LaunchAgents before).
@@ -97,7 +97,7 @@ async function installMacosService(state: InitState): Promise<void> {
   // BUG-FF: XML-escape all user-controlled values interpolated into the plist to prevent
   // malformed XML or plist-key injection if agentBin / backendOrigin / LOGS_DIR contain
   // &, <, >, ", or ' characters (e.g. a home directory named "O'Brien" or a URL with &).
-  const backendOrigin = xmlEscape(state.backendOrigin ?? "");
+  const backendOrigin = xmlEscape(validOrigin);
   const escapedAgentBin = xmlEscape(agentBin);
   const escapedLogsDir = xmlEscape(LOGS_DIR);
 
@@ -141,7 +141,7 @@ async function installMacosService(state: InitState): Promise<void> {
   execSync(`launchctl load "${plistPath}"`, { stdio: "pipe" });
 }
 
-async function installLinuxService(state: InitState): Promise<void> {
+async function installLinuxService(state: InitState, validOrigin: string): Promise<void> {
   const systemdDir = join(homedir(), ".config", "systemd", "user");
   await mkdir(systemdDir, { recursive: true });
 
@@ -153,10 +153,10 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=${agentBin} tetherdesk-agent start --backend ${state.backendOrigin ?? ""}
+ExecStart=${agentBin} tetherdesk-agent start --backend ${validOrigin}
 Restart=always
 RestartSec=5
-Environment=TETHERDESK_BACKEND_URL=${state.backendOrigin ?? ""}
+Environment=TETHERDESK_BACKEND_URL=${validOrigin}
 StandardOutput=append:${LOGS_DIR}/agent.log
 StandardError=append:${LOGS_DIR}/agent-error.log
 
@@ -170,14 +170,14 @@ WantedBy=default.target
   execSync("systemctl --user start tetherdesk-agent", { stdio: "pipe" });
 }
 
-async function installWindowsService(state: InitState): Promise<void> {
+async function installWindowsService(state: InitState, validOrigin: string): Promise<void> {
   // Use Windows Task Scheduler (schtasks.exe) to register the agent as a
   // persistent background task that survives reboots and is visible in
   // Task Scheduler / Task Manager under "TetherDesk Agent".
   // This is preferable to a detached spawn (which dies with the terminal)
   // and avoids requiring node-windows or elevation for SC.EXE.
   const agentBin = process.execPath;
-  const backendUrl = state.backendOrigin ?? "";
+  const backendUrl = validOrigin;
   const logFile = join(LOGS_DIR, "agent.log");
 
   // Write a small wrapper batch file that redirects stdout/stderr to the log
