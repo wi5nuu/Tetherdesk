@@ -19,6 +19,8 @@
   --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
   --radius: 8px;
   --radius-lg: 12px;
+  --page-padding: 24px;
+  --page-max: 1200px;
 }
 
 html, body {
@@ -347,12 +349,12 @@ body:not(.no-select) {
   
   /* Landing page sections - smaller padding on mobile */
   .landing-section {
-    padding: 40px 0 !important;
+    padding: 40px var(--page-padding) !important;
   }
   
   /* Landing page wrapper - smaller side padding */
   .landing-wrap {
-    padding: 0 16px !important;
+    padding: 0 var(--page-padding) !important;
   }
   
   /* Landing page grid - 1 column on mobile */
@@ -374,7 +376,7 @@ body:not(.no-select) {
   
   /* Docs page - smaller padding */
   .docs-wrap {
-    padding: 0 16px !important;
+    padding: 0 var(--page-padding) !important;
   }
   
   /* Docs grid - 1 column on mobile */
@@ -384,7 +386,7 @@ body:not(.no-select) {
   
   /* Access page - responsive layout */
   .access-container {
-    padding: 20px 16px !important;
+    padding: 20px var(--page-padding) !important;
   }
   
   /* Docs sidebar - hide on mobile */
@@ -408,6 +410,39 @@ body:not(.no-select) {
 }
 
 @media (max-width: 768px) {
+  :root {
+    --page-padding: 16px;
+  }
   .navbar-desktop-links { display: none !important; }
   .navbar-menu-btn { display: flex !important; }
+  .navbar-inner, .footer-inner {
+    padding: 0 var(--page-padding) !important;
+  }
+}
+
+/* Android mobile — Material You inspired styling */
+@media (hover: none) and (pointer: coarse) {
+  :root {
+    --page-padding: 16px;
+  }
+  html, body {
+    -webkit-tap-highlight-color: rgba(74, 222, 128, 0.15);
+  }
+  button, a, [role="button"], [tabindex]:not([tabindex="-1"]) {
+    touch-action: manipulation;
+  }
+  .btn-primary, .btn-secondary, .btn-allow, .btn-deny,
+  .navbar-link, .mobile-menu-link, .nav-item-hover {
+    min-height: 44px;
+  }
+  .navbar-link, .mobile-menu-link {
+    padding: 12px 16px !important;
+  }
+  .btn-primary, .btn-secondary, .btn-allow, .btn-deny {
+    padding: 14px 20px !important;
+    font-size: 15px !important;
+  }
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }

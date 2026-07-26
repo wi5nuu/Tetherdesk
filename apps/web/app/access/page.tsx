@@ -18,7 +18,7 @@ const s: Record<string, React.CSSProperties> = {
     minHeight: "100dvh", background: "#0a0a0a", color: "#e0e0e0",
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-    padding: 24,
+    padding: "0 var(--page-padding)", width: "100%",
   },
   card: {
     width: "min(400px, 100%)", background: "#111",

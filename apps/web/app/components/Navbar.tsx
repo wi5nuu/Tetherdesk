@@ -29,7 +29,7 @@ export function Navbar({ variant = "default", onDonate }: { variant?: NavbarVari
 
   return (
     <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,10,0.85)", backdropFilter: "blur(12px)", borderBottom: "1px solid #141414" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
+      <div className="navbar-inner" style={{ width: "100%", maxWidth: "var(--page-max)", margin: "0 auto", padding: "0 var(--page-padding)", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
         {/* Logo */}
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <span style={{ fontWeight: 700, fontSize: 18, color: "#4ade80" }}>TetherDesk</span>

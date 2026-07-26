@@ -13,7 +13,7 @@ import { Footer } from "./components/Footer";
 
 const s = {
   page: { background: "#0a0a0a", color: "#e0e0e0", fontFamily: '"Calibri", "Segoe UI", Tahoma, Geneva, sans-serif', minHeight: "100dvh", overflowX: "hidden" as const } as React.CSSProperties,
-  wrap: { maxWidth: 1100, margin: "0 auto", padding: "0 20px" } as React.CSSProperties,
+  wrap: { width: "100%", maxWidth: "var(--page-max)", margin: "0 auto", padding: "0 var(--page-padding)" } as React.CSSProperties,
   mono: { fontFamily: '"SF Mono", "Fira Code", "Roboto Mono", monospace' } as React.CSSProperties,
   btn: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 8, fontWeight: 600, fontSize: 15, cursor: "pointer", border: "none", transition: "all 0.15s", textDecoration: "none" } as React.CSSProperties,
   btnPrimary: { background: "#4ade80", color: "#0a0a0a" } as React.CSSProperties,

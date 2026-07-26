@@ -11,7 +11,7 @@ const s: Record<string, React.CSSProperties> = {
     minHeight: "100dvh", background: "#0a0a0a", color: "#e0e0e0",
     fontFamily: '"Calibri", "Segoe UI", Tahoma, Geneva, sans-serif',
   },
-  container: { display: "flex", maxWidth: 1200, margin: "0 auto", padding: "0 24px", gap: 40, position: "relative" as const },
+  container: { display: "flex", width: "100%", maxWidth: "var(--page-max)", margin: "0 auto", padding: "0 var(--page-padding)", gap: 40, position: "relative" as const },
   sidebar: {
     width: 240, flexShrink: 0, position: "sticky" as const, top: 80, maxHeight: "calc(100vh - 100px)",
     overflowY: "auto" as const, background: "#0d0d0d", border: "1px solid #1f1f1f",
@@ -24,7 +24,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   tocItemActive: { color: "#4ade80", borderLeft: "2px solid #4ade80", background: "#0a1a0f" },
   main: { flex: 1, minWidth: 0 },
-  wrap: { maxWidth: 820 },
+  wrap: { maxWidth: 820, width: "100%" },
   hero: { padding: "40px 0", textAlign: "center" as const },
   h1: { fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 16, lineHeight: 1.1 },
   sub: { fontSize: 16, color: "#999", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 },

@@ -1015,7 +1015,7 @@ const s: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     overflow: "auto",
-    padding: "28px 32px",
+    padding: "28px var(--page-padding)",
     gap: 20,
   },
   pageHeader: {

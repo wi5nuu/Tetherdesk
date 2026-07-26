@@ -11,7 +11,7 @@ export function Footer() {
 
   return (
     <footer style={{ borderTop: "1px solid #141414", padding: "48px 0 32px" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px" }}>
+      <div className="footer-inner" style={{ width: "100%", maxWidth: "var(--page-max)", margin: "0 auto", padding: "0 var(--page-padding)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
           <div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "#4ade80" }}>TetherDesk</span>
