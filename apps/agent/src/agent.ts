@@ -265,7 +265,7 @@ export class TetherDeskAgent {
         body: JSON.stringify({ pairingUrl, expiresAt }),
         signal: AbortSignal.timeout(5_000),
       });
-      console.log(`Open http://localhost:3000 on your laptop to see the QR code in a browser.\n`);
+      console.log(`Open ${this.config.backendOrigin}/dashboard on your laptop to approve the connection.\n`);
     } catch {
       // Non-fatal — the terminal QR is still valid
     }
