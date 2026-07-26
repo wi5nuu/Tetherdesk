@@ -50,37 +50,43 @@ function generateAgentSecret(): string {
 }
 
 /**
- * Find the agent entry point bundled inside the tetherdesk package.
- * During build, apps/agent/dist/main.js is copied to dist/agent/main.js.
- * Falls back to the workspace path for local dev.
+ * Find the agent entry point.
+ * Priority:
+ * 1. TETHERDESK_AGENT_PATH env var (override for dev/testing)
+ * 2. tetherdesk-agent binary in PATH (installed globally)
+ * 3. Workspace sibling apps/agent/dist/main.js (dev mode)
+ * 4. ~/.tetherdesk/agent/main.js (installed by `tetherdesk init`)
  */
-function findAgentScript(): string {
+async function findAgentScript(): Promise<{ type: "binary" | "script"; path: string } | null> {
   const _require = createRequire(import.meta.url);
   const __dirname = dirname(fileURLToPath(import.meta.url));
 
-  // 1. Bundled alongside CLI (production: dist/agent/main.js)
-  const bundledPath = join(__dirname, "agent", "main.js");
+  // 1. Env override
+  if (process.env["TETHERDESK_AGENT_PATH"]) {
+    return { type: "script", path: process.env["TETHERDESK_AGENT_PATH"] };
+  }
 
-  // 2. Workspace sibling (dev: apps/agent/dist/main.js)
+  // 2. Installed globally as @tetherdesk/agent
+  try {
+    const resolved = _require.resolve("@tetherdesk/agent/dist/main.js");
+    return { type: "script", path: resolved };
+  } catch { /* not installed */ }
+
+  // 3. Workspace sibling (dev: running from inside the repo)
   const workspacePath = join(__dirname, "..", "..", "..", "apps", "agent", "dist", "main.js");
-
-  // Try resolving @tetherdesk/agent if installed as a dep
   try {
-    return _require.resolve("@tetherdesk/agent");
-  } catch {
-    // not installed as a peer dep
-  }
+    await fsAccess(workspacePath);
+    return { type: "script", path: workspacePath };
+  } catch { /* not found */ }
 
-  // Use bundled or workspace path (existsSync not needed — node will error clearly)
+  // 4. ~/.tetherdesk/agent/main.js (installed by tetherdesk init)
+  const installedPath = join(homedir(), ".tetherdesk", "agent", "main.js");
   try {
-    const { existsSync } = require("node:fs") as typeof import("node:fs");
-    if (existsSync(bundledPath)) return bundledPath;
-    if (existsSync(workspacePath)) return workspacePath;
-  } catch {
-    // ignore
-  }
+    await fsAccess(installedPath);
+    return { type: "script", path: installedPath };
+  } catch { /* not found */ }
 
-  return bundledPath; // let node throw a clear "module not found" if missing
+  return null;
 }
 
 function killProc(proc: ChildProcess): void {
@@ -132,12 +138,21 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
   await writeConfig({ ...existingConfig, backendOrigin: backendUrl, agentSecret });
   console.log(pc.dim(`  Config saved to ${CONFIG_PATH}\n`));
 
-  // ── Start agent ────────────────────────────────────────────────────────────
+  // ── Find and start agent ───────────────────────────────────────────────────
   console.log(pc.bold("[1/1] Starting TetherDesk agent…\n"));
 
-  const agentScript = findAgentScript();
+  const agentLocation = await findAgentScript();
 
-  const agentProc = spawn(process.execPath, [agentScript, "start"], {
+  if (!agentLocation) {
+    console.error(pc.red("  Agent not found on this system.\n"));
+    console.error(pc.white("  TetherDesk agent needs to be installed first."));
+    console.error(pc.white("  Run the following command to set up:"));
+    console.error(pc.bold(pc.cyan("\n    npx tetherdesk init\n")));
+    console.error(pc.dim("  This will install the agent as a background service on your laptop."));
+    process.exit(1);
+  }
+
+  const agentProc = spawn(process.execPath, [agentLocation.path, "start"], {
     stdio: "inherit",
     env: {
       ...process.env,
@@ -149,8 +164,8 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
 
   agentProc.on("error", (err) => {
     console.error(pc.red(`\n  Agent failed to start: ${err.message}`));
-    console.error(pc.dim(`  Agent path: ${agentScript}`));
-    console.error(pc.dim(`  Run 'npx tetherdesk init' to set up TetherDesk first.`));
+    console.error(pc.dim(`  Agent path: ${agentLocation.path}`));
+    console.error(pc.dim(`  Run 'npx tetherdesk init' to reinstall the agent.`));
     process.exit(1);
   });
 
