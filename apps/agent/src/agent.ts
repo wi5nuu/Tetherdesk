@@ -60,6 +60,8 @@ export interface AgentConfig {
   turnUsername?: string;
   turnCredential?: string;
   logLevel?: "debug" | "info" | "warn" | "error";
+  /** Override the IPC socket/pipe path — used in tests to avoid EADDRINUSE on the shared agent pipe. */
+  ipcPath?: string;
 }
 
 interface IdentityKeyPair {
@@ -798,7 +800,7 @@ export class TetherDeskAgent {
   // -------------------------------------------------------------------------
 
   private async _startIPCServer(): Promise<void> {
-    const path = socketPath();
+    const path = this.config.ipcPath ?? socketPath();
 
     // Remove stale socket file on Unix
     if (process.platform !== "win32") {

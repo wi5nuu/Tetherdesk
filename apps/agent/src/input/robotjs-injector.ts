@@ -12,6 +12,8 @@
  * implementation detail shared by the per-platform wrapper classes.
  */
 
+import { createRequire } from "node:module";
+
 // Button mask constants used by robotjs
 const BUTTON_LEFT = 0x01;
 const BUTTON_RIGHT = 0x02;
@@ -60,8 +62,8 @@ type RobotJs = {
 };
 
 function loadRobotJs(): RobotJs {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require("@jitsi/robotjs") as RobotJs;
+  const _require = createRequire(import.meta.url);
+  return _require("@jitsi/robotjs") as RobotJs;
 }
 
 function codeToRobotKey(code: string): string {
