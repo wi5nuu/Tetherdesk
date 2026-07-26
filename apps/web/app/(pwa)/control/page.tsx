@@ -777,7 +777,7 @@ export default function ControlPage() {
         <div style={styles.videoHint}>
           <span style={{ fontSize: 13, color: "#fbbf24" }}>&#9888;</span>
           <span style={styles.videoHintText}>
-            Connected but not receiving video — check that the laptop agent has WebRTC support installed.
+            Connected but no video — on the laptop, run: <code style={{ color: "#4ade80", fontSize: 11 }}>npm install -g @roamhq/wrtc</code>
           </span>
         </div>
       )}
