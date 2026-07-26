@@ -182,7 +182,7 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
         if (!json.ok || !json.data?.pairingUrl) continue;
 
         const match = json.data.pairingUrl.match(/\/pair\/([A-Za-z0-9_-]+)/);
-        if (!match) continue;
+        if (!match || !match[1]) continue;
         const token = match[1];
 
         console.log(pc.bold(pc.yellow("\n  ╔══════════════════════════════════╗")));
