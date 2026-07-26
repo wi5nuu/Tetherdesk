@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request);
-  const rateLimit = await checkPollingRateLimit(ip);
+  const rateLimit = await checkPollingRateLimit(ip, "active-qr");
   if (!rateLimit.allowed) {
     return jsonError(ErrorCode.RATE_LIMITED, "Too many requests");
   }

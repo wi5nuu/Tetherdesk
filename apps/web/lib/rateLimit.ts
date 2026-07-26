@@ -87,7 +87,8 @@ export async function checkPairingConfirmRateLimit(ip: string): Promise<RateLimi
  * Allows 100 requests per 60 seconds per IP.
  * Fails OPEN on Redis unavailability to avoid breaking polling loops.
  */
-export async function checkPollingRateLimit(ip: string): Promise<RateLimitResult> {
+export async function checkPollingRateLimit(ip: string, endpoint: string): Promise<RateLimitResult> {
   // Use a separate namespace for polling to avoid clashing with start/confirm
-  return checkRateLimit(`td:rate_limit:poll:${ip}`, true, 100, 60);
+  // Scope by endpoint so polling active-qr doesn't exhaust signal/poll limits
+  return checkRateLimit(`td:rate_limit:poll:${endpoint}:${ip}`, true, 100, 60);
 }

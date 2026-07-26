@@ -13,7 +13,7 @@ export const maxDuration = 30;
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<SignalingPayload[]>>> {
   const ip = getClientIp(request);
-  const rateLimit = await checkPollingRateLimit(ip);
+  const rateLimit = await checkPollingRateLimit(ip, "signal-poll");
   if (!rateLimit.allowed) {
     return jsonError(ErrorCode.RATE_LIMITED, "Too many requests");
   }
