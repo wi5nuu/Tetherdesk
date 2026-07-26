@@ -846,8 +846,15 @@ export class TetherDeskAgent {
     this.ipcServer.maxConnections = 5;
 
     await new Promise<void>((resolve, reject) => {
-      this.ipcServer!.listen(path, () => resolve());
-      this.ipcServer!.on("error", reject);
+      const onError = (err: Error) => reject(err);
+      this.ipcServer!.once("error", onError);
+      this.ipcServer!.listen(path, () => {
+        this.ipcServer!.off("error", onError);
+        this.ipcServer!.on("error", (err) => {
+          console.error("IPC server error:", err.message);
+        });
+        resolve();
+      });
     });
   }
 
