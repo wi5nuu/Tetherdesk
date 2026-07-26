@@ -102,6 +102,10 @@ export default function ControlPage() {
     "direct" | "relay" | "unknown"
   >("unknown");
 
+  const [showKeyboard, setShowKeyboard] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [heldModifiers, setHeldModifiers] = useState<Set<string>>(new Set());
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
@@ -111,6 +115,7 @@ export default function ControlPage() {
   const reconnectAttemptRef = useRef(0);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollActiveRef = useRef(false);
+  const keyboardInputRef = useRef<HTMLInputElement>(null);
   // ICE candidates that arrived before remoteDescription was set — drained after setRemoteDescription
   const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
   // Stable ref to connectSignaling so scheduleReconnect's setTimeout always calls the latest version
@@ -601,6 +606,44 @@ export default function ControlPage() {
     [sendEncryptedInput],
   );
 
+  const sendKeyEvent = useCallback((code: string, down: boolean) => {
+    void sendEncryptedInput({ t: "key", code, down, ts: Date.now() });
+  }, [sendEncryptedInput]);
+
+  const toggleModifier = useCallback((code: string) => {
+    const isHeld = heldModifiers.has(code);
+    void sendEncryptedInput({ t: "key", code, down: !isHeld, ts: Date.now() });
+    setHeldModifiers((prev) => {
+      const next = new Set(prev);
+      if (isHeld) next.delete(code); else next.add(code);
+      return next;
+    });
+  }, [heldModifiers, sendEncryptedInput]);
+
+  const tapKey = useCallback((code: string) => {
+    void sendEncryptedInput({ t: "key", code, down: true, ts: Date.now() });
+    setTimeout(() => {
+      void sendEncryptedInput({ t: "key", code, down: false, ts: Date.now() });
+    }, 60);
+  }, [sendEncryptedInput]);
+
+  const handleKeyboardFieldKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    const event: InputEvent = { t: "key", code: e.code, down: true, ts: Date.now() };
+    void sendEncryptedInput(event);
+    // Send keyup on next tick so the remote sees both down and up
+    setTimeout(() => {
+      void sendEncryptedInput({ ...event, down: false });
+    }, 60);
+    // Do NOT preventDefault — let the input field update its value
+  }, [sendEncryptedInput]);
+
+  const clearHeldModifiers = useCallback(() => {
+    for (const code of heldModifiers) {
+      void sendEncryptedInput({ t: "key", code, down: false, ts: Date.now() });
+    }
+    setHeldModifiers(new Set());
+  }, [heldModifiers, sendEncryptedInput]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -691,7 +734,10 @@ export default function ControlPage() {
       {/* Remote screen video */}
       <video
         ref={videoRef}
-        style={styles.video}
+        style={{
+          ...styles.video,
+          objectFit: isZoomed ? "cover" : "contain",
+        }}
         autoPlay
         playsInline
         muted
@@ -707,6 +753,93 @@ export default function ControlPage() {
           <p style={styles.overlayText}>Reconnecting…</p>
         </div>
       )}
+
+      {/* Keyboard input field */}
+      {showKeyboard && (
+        <div style={styles.keyboardContainer}>
+          <input
+            ref={keyboardInputRef}
+            type="text"
+            autoFocus
+            placeholder="Type here — keystrokes sent to remote laptop"
+            style={styles.keyboardInput}
+            onKeyDown={handleKeyboardFieldKeyDown}
+            aria-label="Keyboard input for remote laptop"
+          />
+          <button
+            className="btn-secondary"
+            style={styles.keyboardCloseBtn}
+            onClick={() => { clearHeldModifiers(); setShowKeyboard(false); }}
+            aria-label="Close keyboard"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Control toolbar */}
+      <div style={styles.controlBar}>
+        <button
+          className="btn-secondary"
+          style={{ ...styles.ctrlBtn, background: isZoomed ? "#333" : undefined }}
+          onClick={() => setIsZoomed(!isZoomed)}
+          aria-label={isZoomed ? "Fit to screen" : "Zoom to fill"}
+        >
+          {isZoomed ? "⊟ Fit" : "⊞ Zoom"}
+        </button>
+
+        <button
+          className="btn-secondary"
+          style={{ ...styles.ctrlBtn, background: showKeyboard ? "#333" : undefined }}
+          onClick={() => { setShowKeyboard(!showKeyboard); setTimeout(() => keyboardInputRef.current?.focus(), 100); }}
+          aria-label="Toggle keyboard"
+        >
+          ⌨
+        </button>
+
+        <div style={styles.ctrlDivider} />
+
+        <button
+          className="btn-secondary"
+          style={{ ...styles.ctrlBtn, background: heldModifiers.has("ControlLeft") ? "#4a5568" : undefined }}
+          onClick={() => toggleModifier("ControlLeft")}
+          aria-pressed={heldModifiers.has("ControlLeft")}
+        >
+          {heldModifiers.has("ControlLeft") ? "Ctrl ON" : "Ctrl"}
+        </button>
+
+        <button
+          className="btn-secondary"
+          style={{ ...styles.ctrlBtn, background: heldModifiers.has("AltLeft") ? "#4a5568" : undefined }}
+          onClick={() => toggleModifier("AltLeft")}
+          aria-pressed={heldModifiers.has("AltLeft")}
+        >
+          {heldModifiers.has("AltLeft") ? "Alt ON" : "Alt"}
+        </button>
+
+        <button
+          className="btn-secondary"
+          style={{ ...styles.ctrlBtn, background: heldModifiers.has("MetaLeft") ? "#4a5568" : undefined }}
+          onClick={() => toggleModifier("MetaLeft")}
+          aria-pressed={heldModifiers.has("MetaLeft")}
+        >
+          {heldModifiers.has("MetaLeft") ? "Win ON" : "Win"}
+        </button>
+
+        <div style={styles.ctrlDivider} />
+
+        <button className="btn-secondary" style={styles.ctrlBtn} onClick={() => tapKey("Escape")}>Esc</button>
+        <button className="btn-secondary" style={styles.ctrlBtn} onClick={() => tapKey("Tab")}>Tab</button>
+        <button className="btn-secondary" style={styles.ctrlBtn} onClick={() => tapKey("Enter")}>⏎</button>
+        <button className="btn-secondary" style={styles.ctrlBtn} onClick={() => tapKey("Backspace")}>⌫</button>
+        <button className="btn-secondary" style={styles.ctrlBtn} onClick={() => tapKey("Delete")}>Del</button>
+
+        {heldModifiers.size > 0 && (
+          <button className="btn-secondary" style={{ ...styles.ctrlBtn, color: "#fbbf24" }} onClick={clearHeldModifiers}>
+            ✕ Clear
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -859,5 +992,67 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     cursor: "pointer",
     marginTop: 8,
+  },
+  controlBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    padding: "6px 8px",
+    background: "#1a1a1a",
+    flexShrink: 0,
+    overflowX: "auto",
+    WebkitOverflowScrolling: "touch",
+    minHeight: 40,
+  },
+  ctrlBtn: {
+    background: "#2a2a2a",
+    color: "#ccc",
+    border: "1px solid #3a3a3a",
+    borderRadius: 6,
+    padding: "4px 10px",
+    fontSize: 11,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    minHeight: 28,
+    minWidth: 36,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ctrlDivider: {
+    width: 1,
+    height: 20,
+    background: "#333",
+    flexShrink: 0,
+    margin: "0 2px",
+  },
+  keyboardContainer: {
+    display: "flex",
+    gap: 4,
+    padding: "6px 8px",
+    background: "#111",
+    flexShrink: 0,
+    alignItems: "center",
+  },
+  keyboardInput: {
+    flex: 1,
+    background: "#222",
+    color: "#f0f0f0",
+    border: "1px solid #444",
+    borderRadius: 6,
+    padding: "8px 12px",
+    fontSize: 14,
+    outline: "none",
+    minHeight: 36,
+  },
+  keyboardCloseBtn: {
+    background: "#333",
+    color: "#aaa",
+    border: "1px solid #444",
+    borderRadius: 6,
+    padding: "6px 12px",
+    fontSize: 14,
+    cursor: "pointer",
+    minHeight: 36,
   },
 };

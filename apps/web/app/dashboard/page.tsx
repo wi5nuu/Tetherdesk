@@ -92,6 +92,7 @@ export default function HomePage() {
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [autoApprove, setAutoApprove] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasActiveClient, setHasActiveClient] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -114,6 +115,9 @@ export default function HomePage() {
           const next = [...prev, evt];
           return next.length > 100 ? next.slice(-100) : next;
         });
+        if (evt.stage === "connection" && evt.level === "success") {
+          setHasActiveClient(true);
+        }
       } catch { /* ignore malformed */ }
     };
 
@@ -548,7 +552,30 @@ export default function HomePage() {
         )}
 
         <div className="dashboard-grid" style={s.grid}>
-          {/* QR card */}
+          {/* QR card — hidden when a client is already connected */}
+          {hasActiveClient ? (
+            <div className="card-hover" style={s.card}>
+              <div style={s.cardHeader}>
+                <span style={{ ...s.cardIcon, color: "#4ade80" }}>&#10003;</span>
+                <div>
+                <div style={s.cardTitle}>{"\u2713 " + d.qrTitle}</div>
+                <div style={s.cardSub}>{d.clientsSub}</div>
+                </div>
+              </div>
+              <div style={{ padding: "16px 20px", textAlign: "center" }}>
+                <div style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>
+                  {d.noClientsHint}
+                </div>
+                <button
+                  className="btn-secondary"
+                  style={s.btnSecondary}
+                  onClick={() => { setHasActiveClient(false); void handleRefreshQr(); }}
+                >
+                  {d.newQr}
+                </button>
+              </div>
+            </div>
+          ) : (
           <div className="card-hover" style={s.card}>
             <div style={s.cardHeader}>
               <span style={s.cardIcon}>&#9635;</span>
@@ -637,6 +664,7 @@ export default function HomePage() {
               )}
             </div>
           </div>
+          )}
 
           {/* Clients card */}
           <div className="card-hover" style={s.card}>
