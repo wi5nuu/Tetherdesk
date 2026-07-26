@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseTunnelUrl } from "../src/steps/start.js";
+import { parseTunnelUrl } from "../src/steps/tunnel.js";
 
 describe("parseTunnelUrl", () => {
   // ── Happy paths ───────────────────────────────────────────────────────────
