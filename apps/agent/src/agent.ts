@@ -262,7 +262,7 @@ export class TetherDeskAgent {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${this.config.agentSecret}`,
         },
-        body: JSON.stringify({ pairingUrl, expiresAt, pairingToken }),
+        body: JSON.stringify({ pairingUrl, expiresAt, pairingToken, laptopJwt: bearerToken }),
         signal: AbortSignal.timeout(5_000),
       });
       console.log(`Open ${this.config.backendOrigin}/dashboard on your laptop to approve the connection.\n`);

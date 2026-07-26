@@ -217,26 +217,22 @@ export default function HomePage() {
       const activeResp = await fetch("/api/pairing/active-qr", { cache: "no-store" });
       if (activeResp.ok) {
         const activeData = (await activeResp.json()) as
-          | { ok: true; data: { pairingUrl: string; expiresAt: number } }
+          | { ok: true; data: { pairingUrl: string; expiresAt: number; laptopJwt?: string } }
           | { ok: false };
         if (activeData.ok && activeData.data.expiresAt > Date.now()) {
           setAgentOnline(true);
           const { pairingUrl, expiresAt } = activeData.data;
 
+          // Store laptop JWT from active-qr response — available before pairingToken is consumed
+          if (activeData.data.laptopJwt) laptopJwtRef.current = activeData.data.laptopJwt;
+
           // Extract sessionId from the pairingUrl for approval polling
           try {
             const b64 = pairingUrl.split("/pair/")[1];
             if (b64) {
-              const decoded = JSON.parse(base64UrlDecode(b64)) as { sessionId?: string; pairingToken?: string };
+              const decoded = JSON.parse(base64UrlDecode(b64)) as { sessionId?: string };
               if (decoded.sessionId) {
                 startApprovalPolling(decoded.sessionId);
-                // Fetch the laptop JWT so we can authenticate approval responses
-                const params = new URLSearchParams({ sessionId: decoded.sessionId });
-                if (decoded.pairingToken) params.set("pairingToken", decoded.pairingToken);
-                void fetch(`/api/pairing/laptop-jwt?${params}`, { cache: "no-store" })
-                  .then(r => r.ok ? r.json() : null)
-                  .then(data => { if (data?.ok && data.data?.laptopJwt) laptopJwtRef.current = data.data.laptopJwt; })
-                  .catch(() => { /* non-fatal — will try on next QR refresh */ });
               }
             }
           } catch { /* best-effort */ }
