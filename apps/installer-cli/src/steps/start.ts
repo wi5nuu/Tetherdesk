@@ -233,7 +233,7 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
     }
     // If polling times out, show manual instructions
     console.log(pc.yellow("\n  Could not retrieve access key automatically."));
-    console.log(pc.dim(`  Open the dashboard and scan the QR code manually:`));
+    console.log(pc.dim(`  Open the dashboard and check the agent status:`));
     console.log(pc.bold(`  ${backendUrl}/dashboard`));
   })();
 

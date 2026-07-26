@@ -200,25 +200,25 @@ export default function DocsPage() {
             <div style={s.card}>
               <div style={s.cardTitle}>Step 1: Start Agent</div>
               <div style={s.cardDesc}>
-                Run <Code>npx tetherdesk start</Code> on your laptop. This starts a local web dashboard with a QR code for pairing.
+                Run <Code>npx tetherdesk</Code> on your laptop. The agent connects to the backend and a <Code>TD-XXXXXX</Code> key appears in the terminal.
               </div>
             </div>
             <div style={s.card}>
-              <div style={s.cardTitle}>Step 2: Open Dashboard</div>
+              <div style={s.cardTitle}>Step 2: Enter Key on Phone</div>
               <div style={s.cardDesc}>
-                Open the dashboard URL shown in the terminal. It displays a QR code that refreshes every 90 seconds.
+                Open <Code>/access</Code> on your phone. Enter the <Code>TD-XXXXXX</Code> key shown in the terminal, or use a persistent <Code>sk-xxx</Code> API key from the dashboard.
               </div>
             </div>
             <div style={s.card}>
-              <div style={s.cardTitle}>Step 3: Connect Phone</div>
+              <div style={s.cardTitle}>Step 3: Approve on Laptop</div>
               <div style={s.cardDesc}>
-                Open <Code>/access</Code> on your phone. Enter an access key or scan the QR code from the dashboard.
+                Your laptop shows an approval prompt. Click <span style={{ color: "#4ade80", fontWeight: 600 }}>Allow</span> to confirm the connection from your phone.
               </div>
             </div>
             <div style={s.card}>
-              <div style={s.cardTitle}>Step 4: Approve</div>
+              <div style={s.cardTitle}>Step 4: Control</div>
               <div style={s.cardDesc}>
-                Your laptop shows an approval prompt. Click <span style={{ color: "#4ade80", fontWeight: 600 }}>Allow</span>. Your phone now has remote control access.
+                Your laptop screen streams to your phone. Tap to click, swipe to scroll — full remote control is now active.
               </div>
             </div>
           </div>
@@ -232,18 +232,18 @@ export default function DocsPage() {
           <p style={s.p}>
             The fastest way to try TetherDesk. No installation required — Node.js downloads and caches the package automatically.
           </p>
-          <CodeBlock>{`npx tetherdesk start`}</CodeBlock>
+          <CodeBlock>{`npx tetherdesk`}</CodeBlock>
 
           <h3 style={s.h3}>Option B: Global install with npm</h3>
           <p style={s.p}>
-            Install once, use forever. The CLI is a single 111 KB self-contained bundle with all dependencies included.
+            Install once, use forever. The CLI is a single self-contained bundle with all dependencies included.
           </p>
           <CodeBlock>{`npm install -g tetherdesk
-tetherdesk start`}</CodeBlock>
+tetherdesk`}</CodeBlock>
 
           <h3 style={s.h3}>Option C: Global install with pnpm</h3>
           <CodeBlock>{`pnpm add -g tetherdesk
-tetherdesk start`}</CodeBlock>
+tetherdesk`}</CodeBlock>
 
           <h3 style={s.h3}>Requirements</h3>
           <ul style={s.ul}>
@@ -300,56 +300,42 @@ tetherdesk start`}</CodeBlock>
 
         {/* 3 Ways to Connect */}
         <section id="three-ways" style={s.section}>
-          <h2 style={s.h2}>3 Ways to Connect</h2>
+          <h2 style={s.h2}>2 Ways to Connect</h2>
           <p style={s.p}>
-            TetherDesk offers three methods to pair your phone with your laptop. All three are equally secure.
+            TetherDesk offers two methods to connect your phone to your laptop. Both are equally secure.
           </p>
 
-          <h3 style={s.h3}>Method 1: Scan QR Code (Recommended)</h3>
+          <h3 style={s.h3}>Method 1: One-Time Key (TD-XXXXXX) — Recommended</h3>
           <p style={s.p}>
-            The fastest and most intuitive method. After running <Code>tetherdesk start</Code> on your laptop, a QR code appears in the terminal. On your phone, navigate to the pairing page and use the camera scanner.
+            The simplest method. Run <Code>npx tetherdesk</Code> on your laptop — a <Code>TD-XXXXXX</Code> key appears in the terminal automatically. Enter it on the access page from your phone.
           </p>
           <h4 style={s.h4}>Steps:</h4>
           <ol style={s.ul}>
-            <li>Run <Code>tetherdesk start</Code> on your laptop</li>
-            <li>Note the <Code>pair URL</Code> shown in the terminal, or scan directly</li>
-            <li>On your phone, the camera opens automatically</li>
-            <li>Point the camera at the QR code on your laptop screen</li>
-            <li>The phone reads the pairing payload and starts the handshake</li>
-            <li>Approve on your laptop — done!</li>
+            <li>Run <Code>npx tetherdesk</Code> on your laptop</li>
+            <li>Wait for the <Code>TD-XXXXXX</Code> key to appear in the terminal</li>
+            <li>Open <Code>/access</Code> on your phone</li>
+            <li>Enter the <Code>TD-XXXXXX</Code> key and click Connect</li>
+            <li>Click <span style={{ color: "#4ade80", fontWeight: 600 }}>Allow</span> on your laptop when the approval prompt appears</li>
+            <li>Your phone now controls your laptop</li>
           </ol>
           <div style={s.note}>
-            The QR code encodes a URL pointing to your backend (e.g., <Code>https://example.com/pair/BASE64URL</Code>). You can share this URL directly instead of scanning.
+            The key expires after 90 seconds. A new one appears automatically — no need to restart the agent.
           </div>
 
-          <h3 style={s.h3}>Method 2: One-Time Key (TD-XXXXXX)</h3>
+          <h3 style={s.h3}>Method 2: Persistent API Key (sk-xxx)</h3>
           <p style={s.p}>
-            No camera needed. Run <Code>tetherdesk pair</Code> on your laptop to get a pairing token. Then enter it on the access page with the <Code>TD-</Code> prefix as a one-time key.
+            Best for daily use. Generate a persistent key from the dashboard and reuse it across sessions. The key never expires and does not require laptop-side approval on each use.
           </p>
           <ol style={s.ul}>
-            <li>Run <Code>tetherdesk pair</Code> on your laptop (agent must be running)</li>
-            <li>Note the <Code>pairing token</Code> displayed in the output</li>
-            <li>Open <Code>/access</Code> on your phone</li>
-            <li>Type <Code>TD-</Code> followed by the pairing token</li>
-            <li>Click Connect — the phone redirects to the pairing page</li>
-            <li>Approve on your laptop</li>
-          </ol>
-
-          <h3 style={s.h3}>Method 3: Persistent API Key (sk-xxx)</h3>
-          <p style={s.p}>
-            Best for daily use. Generate a persistent key from the dashboard and reuse it across sessions. The key never expires.
-          </p>
-          <ol style={s.ul}>
-            <li>Open <Link href="/dashboard" style={{ color: "#4ade80" }}>the dashboard</Link> on any device</li>
+            <li>Open <Link href="/dashboard" style={{ color: "#4ade80" }}>the dashboard</Link> on your laptop</li>
             <li>Click <span style={{ color: "#ccc", fontWeight: 600 }}>Generate Key</span></li>
-            <li>Copy the <Code>sk-xxx</Code> key — it is shown only once</li>
+            <li>Copy the <Code>sk-xxx</Code> key — shown only once</li>
             <li>Open <Code>/access</Code> on your phone</li>
-            <li>Paste or type the key</li>
-            <li>Check <span style={{ color: "#ccc", fontWeight: 600 }}>Remember this key</span> to auto-fill next time</li>
+            <li>Paste the key and check <span style={{ color: "#ccc", fontWeight: 600 }}>Remember this key</span></li>
             <li>Click Connect — you go directly to the control page</li>
           </ol>
           <div style={s.warning}>
-            Unlike one-time keys, API keys do not require laptop-side approval. Keep them secure and revoke unused ones from the dashboard.
+            Keep your API key secret. Anyone with your <Code>sk-xxx</Code> key can access your laptop. Revoke unused keys from the dashboard.
           </div>
         </section>
 
@@ -401,7 +387,7 @@ tetherdesk start`}</CodeBlock>
           <div style={s.card}>
             <div style={s.cardTitle}>"Access key expired"</div>
             <div style={s.cardDesc}>
-              One-time keys expire after 90 seconds. Run <Code>tetherdesk start</Code> again to get a fresh key, or use a persistent API key instead. The QR code on the dashboard also refreshes automatically every 90 seconds.
+              One-time keys expire after 90 seconds. A new <Code>TD-XXXXXX</Code> key appears automatically in the terminal — no need to restart the agent. Or use a persistent <Code>sk-xxx</Code> API key instead.
             </div>
           </div>
 
@@ -413,16 +399,16 @@ tetherdesk start`}</CodeBlock>
           </div>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>Camera does not open on phone</div>
+            <div style={s.cardTitle}>TD-XXXXXX key does not appear in terminal</div>
             <div style={s.cardDesc}>
-              Ensure your browser has camera permissions enabled. On iOS Safari, tap the "AA" icon in the address bar and select "Allow Camera". On Android Chrome, tap the lock icon and enable camera. If the camera still does not open, use the one-time key method instead.
+              The agent polls the backend every 2 seconds for up to 60 seconds. If the key does not appear, check that <Code>AGENT_SECRET</Code> in your Vercel environment matches the value in <Code>~/.tetherdesk/config.json</Code>. Redeploy Vercel after updating environment variables.
             </div>
           </div>
 
           <div style={s.card}>
             <div style={s.cardTitle}>Agent not showing in dashboard</div>
             <div style={s.cardDesc}>
-              Run <Code>tetherdesk status</Code> to check if the agent is running. If the agent shows "stopped", start it with <Code>tetherdesk start</Code>. The dashboard will show "Agent running" when connected.
+              Run <Code>npx tetherdesk</Code> and wait for "Signaling connected". If the agent cannot connect, check your internet connection and that the backend URL in <Code>~/.tetherdesk/config.json</Code> is correct.
             </div>
           </div>
 
@@ -436,7 +422,7 @@ tetherdesk start`}</CodeBlock>
           <div style={s.card}>
             <div style={s.cardTitle}>"Cannot find package tetherdesk"</div>
             <div style={s.cardDesc}>
-              Run <Code>npx tetherdesk start</Code> instead of <Code>tetherdesk start</Code>. The <Code>npx</Code> command downloads the package automatically. If you want a global install, use <Code>npm install -g tetherdesk</Code> first, then run <Code>tetherdesk start</Code>.
+              Run <Code>npx tetherdesk</Code> — the <Code>npx</Code> command downloads the package automatically. If you want a global install, run <Code>npm install -g tetherdesk</Code> first, then just run <Code>tetherdesk</Code>.
             </div>
           </div>
         </section>
@@ -446,73 +432,34 @@ tetherdesk start`}</CodeBlock>
           <h2 style={s.h2}>CLI Command Reference</h2>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>tetherdesk start</div>
+            <div style={s.cardTitle}>tetherdesk (default)</div>
             <div style={s.cardDesc}>
-              Start the agent, create a secure tunnel, and begin the pairing session. Generates both a QR code and a one-time key. This is the primary command for laptop-side operation.
+              Start the agent and connect to the backend. A <Code>TD-XXXXXX</Code> key appears in the terminal automatically. This is the primary command for laptop-side operation.
             </div>
-            <CodeBlock>{`npx tetherdesk start
+            <CodeBlock>{`npx tetherdesk
 
- TetherDesk is running!
+  TetherDesk agent starting...
+  Signaling connected  ✓
 
-  1. Open the dashboard:  http://localhost:3000
-  2. Scan the QR code on your phone
-  3. Tap Allow on this laptop to approve the connection
+  Access key (expires in 90s):
+  TD-A3F7K2
 
- Press Ctrl+C to stop all processes.`}</CodeBlock>
-          </div>
+  Steps:
+  1. Open:  https://tetherdesk-five.vercel.app/access
+  2. Enter key above in the "Access Key" field
+  3. Click Allow on this laptop when prompted
 
-          <div style={s.card}>
-            <div style={s.cardTitle}>tetherdesk status</div>
-            <div style={s.cardDesc}>
-              Show the current agent status, backend connectivity, and paired devices. Useful for debugging.
-            </div>
-          </div>
-
-          <div style={s.card}>
-            <div style={s.cardTitle}>tetherdesk pair</div>
-            <div style={s.cardDesc}>
-              Start a new pairing session without restarting the agent. Displays a pairing token you can enter on the access page with the prefix <Code>TD-</Code> followed by the token.
-            </div>
-            <CodeBlock>{`tetherdesk pair
-
-Pairing session started!
-
-Pairing token: abc123...
-Session ID:    xyz789...
-
-The agent will display a QR code in its terminal output.
-Run 'tetherdesk logs' to view it.`}</CodeBlock>
-          </div>
-
-          <div style={s.card}>
-            <div style={s.cardTitle}>tetherdesk logs</div>
-            <div style={s.cardDesc}>
-              Tail the local agent log file in real time. Shows signaling events, WebRTC state changes, and errors.
-            </div>
+  (Key expires in 90 seconds — a new one will appear automatically)`}</CodeBlock>
           </div>
 
           <div style={s.card}>
             <div style={s.cardTitle}>tetherdesk config [key] [value]</div>
             <div style={s.cardDesc}>
-              Get or set configuration values. Without arguments, shows all config. With a key, shows the value. With key and value, sets the config.
+              Get or set configuration values stored in <Code>~/.tetherdesk/config.json</Code>. Without arguments, shows all config. With a key, shows the value. With key and value, sets the config.
             </div>
-            <CodeBlock>{`tetherdesk config              # show all config
-tetherdesk config backendUrl   # get backend URL
-tetherdesk config backendUrl https://example.com  # set backend URL`}</CodeBlock>
-          </div>
-
-          <div style={s.card}>
-            <div style={s.cardTitle}>tetherdesk devices</div>
-            <div style={s.cardDesc}>
-              List all paired devices and their connection status.
-            </div>
-          </div>
-
-          <div style={s.card}>
-            <div style={s.cardTitle}>tetherdesk destroy</div>
-            <div style={s.cardDesc}>
-              Stop the agent, remove the config file, and clean up. Use <Code>--yes</Code> to skip the confirmation prompt.
-            </div>
+            <CodeBlock>{`tetherdesk config                         # show all config
+tetherdesk config backendOrigin           # get backend URL
+tetherdesk config backendOrigin https://example.com  # set backend URL`}</CodeBlock>
           </div>
         </section>
 

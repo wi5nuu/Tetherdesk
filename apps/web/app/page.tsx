@@ -27,7 +27,7 @@ const s = {
   grid2: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginTop: 48 } as React.CSSProperties,
 };
 
-const APP_VERSION = "2.1.21";
+const APP_VERSION = "2.1.27";
 
 /* ------------------------------------------------------------------ */
 /*  SVG Icons                                                          */
@@ -207,15 +207,20 @@ function Hero() {
 
 function TerminalDemo() {
   const lines = [
-    { text: "$ npx tetherdesk start", dim: true },
+    { text: "$ npx tetherdesk", dim: true },
     { text: "", dim: false },
-    { text: " TetherDesk is running!", dim: false, color: "#4ade80" },
+    { text: "  TetherDesk agent starting...", dim: false, color: "#4ade80" },
+    { text: "  Signaling connected  ✓", dim: false, color: "#4ade80" },
     { text: "", dim: false },
-    { text: "  1. Open the dashboard:  http://localhost:3000", dim: false },
-    { text: "  2. Scan the QR code on your phone", dim: false },
-    { text: "  3. Tap Allow on this laptop to approve the connection", dim: false },
+    { text: "  Access key (expires in 90s):", dim: false },
+    { text: "  TD-A3F7K2", dim: false, color: "#facc15" },
     { text: "", dim: false },
-    { text: "  Press Ctrl+C to stop all processes.", dim: true },
+    { text: "  Steps:", dim: false },
+    { text: "  1. Open dashboard:  https://tetherdesk-five.vercel.app/access", dim: false },
+    { text: "  2. Enter key above in the \"Access Key\" field", dim: false },
+    { text: "  3. Click Allow on this laptop when prompted", dim: false },
+    { text: "", dim: false },
+    { text: "  (Key expires in 90 seconds — a new one will appear automatically)", dim: true },
   ];
 
   return (
@@ -336,15 +341,20 @@ function CliDemo() {
   const c = tr.cta;
 
   const output = [
-    "$ npx tetherdesk start",
+    "$ npx tetherdesk",
     "",
-    " TetherDesk is running!",
+    "  TetherDesk agent starting...",
+    "  Signaling connected  ✓",
     "",
-    "  1. Open the dashboard:  http://localhost:3000",
-    "  2. Scan the QR code on your phone",
-    "  3. Tap Allow on this laptop to approve the connection",
+    "  Access key (expires in 90s):",
+    "  TD-A3F7K2",
     "",
-    "  Press Ctrl+C to stop all processes.",
+    "  Steps:",
+    "  1. Open:  https://tetherdesk-five.vercel.app/access",
+    "  2. Enter key above in the \"Access Key\" field",
+    "  3. Click Allow on this laptop when prompted",
+    "",
+    "  (Key expires in 90 seconds — a new one will appear automatically)",
   ];
 
   return (
@@ -362,10 +372,12 @@ function CliDemo() {
             </div>
             <div style={{ padding: "16px 20px", ...s.mono, fontSize: 13, lineHeight: 1.7 }}>
               {output.map((l, i) => {
-                const isGreen = l === " TetherDesk is running!";
-                const isDim = l.startsWith("$") || l.startsWith("  ");
+                const isGreen = l.includes("✓") || l.includes("starting");
+                const isYellow = l === "  TD-A3F7K2";
+                const isDim = l.startsWith("$") || l.startsWith("  (");
+                const color = isYellow ? "#facc15" : isGreen ? "#4ade80" : isDim ? "#888" : "#ccc";
                 return (
-                  <div key={i} style={{ color: isGreen ? "#4ade80" : isDim ? "#888" : "#ccc", whiteSpace: "pre-wrap" }}>{l}</div>
+                  <div key={i} style={{ color, whiteSpace: "pre-wrap" }}>{l}</div>
                 );
               })}
             </div>

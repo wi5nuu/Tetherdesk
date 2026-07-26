@@ -101,7 +101,7 @@ export default function AccessPage() {
       <div style={s.card}>
         <div style={s.logo}>{a.title}</div>
         <div style={s.version}>
-          <span style={{ color: "#4ade80" }}>●</span> v2.1.21
+          <span style={{ color: "#4ade80" }}>●</span> v2.1.27
         </div>
         <p style={s.sub}>{a.subtitle}</p>
 
