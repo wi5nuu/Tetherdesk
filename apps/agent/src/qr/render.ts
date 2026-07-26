@@ -1,13 +1,14 @@
 import { encodePairingQrPayload, type PairingQrPayload } from "@tetherdesk/protocol";
 import QRCode from "qrcode";
-import qrcodeTerminal from "qrcode-terminal";
 
 /**
- * Renders a pairing QR code to the terminal using ASCII/Unicode block art.
+ * Renders a pairing QR code to the terminal using ASCII block art.
+ * Uses qrcode library to generate terminal-compatible output.
  */
-export function renderQrToTerminal(payload: PairingQrPayload): void {
+export async function renderQrToTerminal(payload: PairingQrPayload): Promise<void> {
   const encoded = encodePairingQrPayload(payload);
-  qrcodeTerminal.generate(encoded, { small: true });
+  const qr = await QRCode.toString(encoded, { type: "terminal", small: true });
+  console.log(qr);
 }
 
 /**

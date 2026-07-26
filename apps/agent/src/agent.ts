@@ -244,7 +244,7 @@ export class TetherDeskAgent {
 
     console.log("\n=== TetherDesk Pairing ===");
     console.log("Scan this QR code with your phone:\n");
-    renderQrToTerminal(qrPayload);
+    void renderQrToTerminal(qrPayload);
     console.log(`\nSession ID: ${sessionId}`);
     console.log(`Pairing token expires in 90 seconds.\n`);
     void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "info", stage: "pairing", message: "QR code generated — waiting for phone to scan", sessionId });
