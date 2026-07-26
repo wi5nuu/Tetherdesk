@@ -227,19 +227,7 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
         }
         if (!token) continue;
 
-        console.log(pc.bold(pc.yellow("\n  ╔══════════════════════════════════╗")));
-        console.log(pc.bold(pc.yellow("  ║       YOUR ACCESS KEY            ║")));
-        console.log(pc.bold(pc.yellow("  ╠══════════════════════════════════╣")));
-        console.log(pc.bold(pc.green(`  ║   TD-${token.padEnd(28)}║`)));
-        console.log(pc.bold(pc.yellow("  ╚══════════════════════════════════╝")));
-        console.log();
-        console.log(pc.cyan("  Steps:"));
-        console.log(pc.white(`  1. Open dashboard: `) + pc.bold(`${backendUrl}/dashboard`));
-        console.log(pc.white(`  2. Enter key above in the "Access Key" field`));
-        console.log(pc.white(`  3. Click Allow on this laptop when prompted`));
-        console.log(pc.white(`  4. Your phone can now control this laptop`));
-        console.log();
-        console.log(pc.dim(`  (Key expires in 90 seconds — a new one will appear automatically)`));
+        console.log(pc.dim(`  (Access key expires in 90 seconds — a new one will appear automatically)`));
         return;
       } catch {
         // keep polling

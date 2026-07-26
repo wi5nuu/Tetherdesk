@@ -102,7 +102,7 @@ export default function AccessPage() {
         <div style={s.card}>
           <div style={s.logo}>{a.title}</div>
           <div style={s.version}>
-            <span style={{ color: "#4ade80" }}>●</span> v2.1.27
+            <span style={{ color: "#4ade80" }}>●</span> v2.1.28
           </div>
           <p style={s.sub}>{a.subtitle}</p>
 
@@ -117,7 +117,9 @@ export default function AccessPage() {
               autoFocus
               autoComplete="one-time-code"
               spellCheck={false}
-              style={{ ...s.input, ...(phase.phase === "error" ? s.inputError : {}) }}
+              style={{ ...s.input, ...(phase.phase === "error" ? s.inputError : {}), outline: "none" }}
+              onFocus={(e) => { (e.target as HTMLInputElement).style.boxShadow = "0 0 0 2px #4ade8055"; (e.target as HTMLInputElement).style.borderColor = "#4ade80"; }}
+              onBlur={(e) => { (e.target as HTMLInputElement).style.boxShadow = ""; (e.target as HTMLInputElement).style.borderColor = phase.phase === "error" ? "#f87171" : "#2a2a2a"; }}
             />
             {phase.phase === "error" && (
               <p style={s.error}>{phase.message}</p>

@@ -50,25 +50,14 @@ html, body {
   }
 }
 
-/* Prevent text selection in control UI only — applied via class, not globally */
-body:not(.no-select) {
-  user-select: auto;
-  -webkit-user-select: auto;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Interactive state utilities                                        */
-/*  Applied via className alongside inline styles for hover/focus      */
-/* ------------------------------------------------------------------ */
-
 /* Card hover lift effect */
 .card-hover {
   transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 .card-hover:hover {
-  border-color: #2a2a2a;
+  border-color: #3a3a3a;
   transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 .card-hover:focus-visible {
   border-color: #4ade80;
@@ -227,28 +216,39 @@ body:not(.no-select) {
 .safe-left   { padding-left:   env(safe-area-inset-left); }
 .safe-right  { padding-right:  env(safe-area-inset-right); }
 
-/* Dashboard hamburger menu - hidden by default, shown on mobile */
+/* Dashboard hamburger menu - hidden by default, shown on mobile below Navbar */
 .dashboard-hamburger {
   display: none;
   position: fixed;
-  top: 16px;
+  top: 68px;
   left: 16px;
   z-index: 1001;
-  background: #0d0d0d;
-  border: 1px solid #1a1a1a;
+  background: #111;
+  border: 1px solid #2a2a2a;
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px 12px;
   cursor: pointer;
   flex-direction: column;
   gap: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
 }
 
 .dashboard-hamburger-line {
-  width: 20px;
+  width: 18px;
   height: 2px;
   background-color: #e0e0e0;
   border-radius: 2px;
   transition: all 0.3s;
+}
+
+/* Dashboard steps responsive grid */
+.dashboard-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
 }
 
 /* Dashboard sidebar overlay */
@@ -259,7 +259,8 @@ body:not(.no-select) {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
   z-index: 999;
 }
 
@@ -321,9 +322,9 @@ body:not(.no-select) {
     display: block !important;
   }
   
-  /* Dashboard content - prevent overflow on mobile */
+  /* Dashboard content - prevent overflow on mobile with space for hamburger */
   .dashboard-content {
-    padding: 60px 16px 20px !important;
+    padding: 68px 16px 20px !important;
     min-width: 0;
     width: 100%;
   }
@@ -439,8 +440,7 @@ body:not(.no-select) {
     padding: 12px 16px !important;
   }
   .btn-primary, .btn-secondary, .btn-allow, .btn-deny {
-    padding: 14px 20px !important;
-    font-size: 15px !important;
+    min-height: 44px;
   }
   input, select, textarea {
     font-size: 16px !important;

@@ -53,34 +53,37 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 
   const { sessionId, role } = auth.claims;
-  const redis = getRedis();
-  const sessionData = await redis.hgetall<Record<string, string>>(redisKeys.session(sessionId));
 
-  if (!sessionData) {
-    return new Response(
-      JSON.stringify({ ok: false, error: { code: ErrorCode.SESSION_NOT_FOUND, message: "Session not found", retryable: false } }),
-      { status: 404, headers: { "Content-Type": "application/json" } },
-    );
-  }
+  try {
+    const redis = getRedis();
+    const sessionData = await redis.hgetall<Record<string, string>>(redisKeys.session(sessionId));
 
-  // Check device revocation before upgrading.
-  // deviceIdToCheck may be undefined if the session record was created before the phone
-  // confirmed (pending state) — skip the revocation check in that case rather than blocking.
-  const deviceIdToCheck = role === "laptop" ? sessionData["laptopPubKey"] : sessionData["phonePubKey"];
-  if (deviceIdToCheck !== undefined && deviceIdToCheck !== "") {
-    const isRevoked = await redis.exists(redisKeys.revoked(deviceIdToCheck));
-    if (isRevoked) {
+    if (!sessionData) {
       return new Response(
-        JSON.stringify({ ok: false, error: { code: ErrorCode.DEVICE_REVOKED, message: "Device revoked", retryable: false } }),
-        { status: 403, headers: { "Content-Type": "application/json" } },
+        JSON.stringify({ ok: false, error: { code: ErrorCode.SESSION_NOT_FOUND, message: "Session not found", retryable: false } }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
       );
     }
-  }
 
-  // Signal to Vercel's WS runtime that this upgrade is authorized.
-  // The actual socket message handling is done in the SOCKET export below.
-  // Vercel's beta runtime intercepts the 101 and wires up the SOCKET handler.
-  return new Response(null, { status: 101 });
+    const deviceIdToCheck = role === "laptop" ? sessionData["laptopPubKey"] : sessionData["phonePubKey"];
+    if (deviceIdToCheck !== undefined && deviceIdToCheck !== "") {
+      const isRevoked = await redis.exists(redisKeys.revoked(deviceIdToCheck));
+      if (isRevoked) {
+        return new Response(
+          JSON.stringify({ ok: false, error: { code: ErrorCode.DEVICE_REVOKED, message: "Device revoked", retryable: false } }),
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    return new Response(null, { status: 101 });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "signal_get_redis_failed", sessionId, role, errorType: error instanceof Error ? error.name : "unknown" }));
+    return new Response(
+      JSON.stringify({ ok: false, error: { code: ErrorCode.STORE_UNAVAILABLE, message: "service unavailable", retryable: true } }),
+      { status: 503, headers: { "Content-Type": "application/json" } },
+    );
+  }
 }
 
 /**
@@ -104,31 +107,31 @@ export async function SOCKET(
   }
 
   const { sessionId, role } = auth.claims;
-  const redis = getRedis();
 
-  // BUG-S1: the GET handler checks revocation before upgrading, but the SOCKET
-  // handler (called by Vercel's runtime after the upgrade) must repeat the
-  // check independently — a device could be revoked in the milliseconds between
-  // the GET 101 response and the SOCKET invocation, or the GET path could be
-  // bypassed entirely in future Vercel runtime versions.
-  const sessionData = await redis.hgetall<Record<string, string>>(redisKeys.session(sessionId));
-  if (!sessionData) {
-    client.close(4002, "Session not found");
-    return;
-  }
-  const deviceIdToCheck = role === "laptop" ? sessionData["laptopPubKey"] : sessionData["phonePubKey"];
-  if (deviceIdToCheck !== undefined && deviceIdToCheck !== "") {
-    const isRevoked = await redis.exists(redisKeys.revoked(deviceIdToCheck));
-    if (isRevoked) {
-      client.close(4003, "Device revoked");
+  try {
+    const redis = getRedis();
+
+    const sessionData = await redis.hgetall<Record<string, string>>(redisKeys.session(sessionId));
+    if (!sessionData) {
+      client.close(4002, "Session not found");
       return;
     }
+    const deviceIdToCheck = role === "laptop" ? sessionData["laptopPubKey"] : sessionData["phonePubKey"];
+    if (deviceIdToCheck !== undefined && deviceIdToCheck !== "") {
+      const isRevoked = await redis.exists(redisKeys.revoked(deviceIdToCheck));
+      if (isRevoked) {
+        client.close(4003, "Device revoked");
+        return;
+      }
+    }
+  } catch (error) {
+    console.error(JSON.stringify({ event: "ws_redis_init_failed", sessionId, role, errorType: error instanceof Error ? error.name : "unknown" }));
+    client.close(4503, "Service unavailable");
+    return;
   }
 
-  // Log connection
   console.log(JSON.stringify({ event: "ws_connected", sessionId, role }));
 
-  // Drain any queued messages immediately on connect
   try {
     await updateSessionRecord(sessionId, { lastActiveAt: Date.now() });
 

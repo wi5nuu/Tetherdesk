@@ -14,7 +14,7 @@ function sessionIdFromPairingUrl(pairingUrl: string): string | undefined {
   try {
     const b64 = pairingUrl.split("/pair/")[1];
     if (!b64) return undefined;
-    const s = b64.replace(/-/g, "+").replace(/_/g, "");
+    const s = b64.replace(/-/g, "+").replace(/_/g, "/");
     const padding = 4 - (s.length % 4);
     const json = JSON.parse(Buffer.from(s + "=".repeat(padding === 4 ? 0 : padding), "base64").toString("utf8"));
     return json?.sessionId;
@@ -35,50 +35,53 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "invalid or missing pairingUrl/expiresAt" }, { status: 400 });
   }
 
-  // Extract sessionId from pairingUrl so we can resolve laptopJwt later without the
-  // pairing record (which gets GETDEL'd when the phone confirms — Section 10.6).
   const sessionId = sessionIdFromPairingUrl(body.pairingUrl) ?? null;
 
-  const redis = getRedis();
-  await redis.set(ACTIVE_QR_KEY, JSON.stringify({
-    pairingUrl: body.pairingUrl,
-    expiresAt: body.expiresAt,
-    pairingToken: body.pairingToken ?? null,
-    sessionId,
-  }), { ex: ACTIVE_QR_TTL });
-
-  return NextResponse.json({ ok: true });
+  try {
+    const redis = getRedis();
+    await redis.set(ACTIVE_QR_KEY, JSON.stringify({
+      pairingUrl: body.pairingUrl,
+      expiresAt: body.expiresAt,
+      pairingToken: body.pairingToken ?? null,
+      sessionId,
+    }), { ex: ACTIVE_QR_TTL });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "active_qr_set_failed", errorType: error instanceof Error ? error.name : "unknown" }));
+    return NextResponse.json({ ok: false, error: "service unavailable" }, { status: 503 });
+  }
 }
 
 export async function GET(_request: NextRequest) {
-  const redis = getRedis();
-  const raw = await redis.get<string>(ACTIVE_QR_KEY);
+  try {
+    const redis = getRedis();
+    const raw = await redis.get<string>(ACTIVE_QR_KEY);
 
-  if (!raw) {
-    return NextResponse.json({ ok: false, error: "no active QR" }, { status: 404 });
-  }
-
-  const data = typeof raw === "string"
-    ? JSON.parse(raw) as { pairingUrl: string; expiresAt: number; pairingToken?: string | null; sessionId?: string | null }
-    : raw as { pairingUrl: string; expiresAt: number; pairingToken?: string | null; sessionId?: string | null };
-
-  // Already expired?
-  if (data.expiresAt < Date.now()) {
-    await redis.del(ACTIVE_QR_KEY);
-    return NextResponse.json({ ok: false, error: "QR expired" }, { status: 404 });
-  }
-
-  // Resolve laptopJwt from the session record using the stored sessionId.
-  // We cannot use pairingToken here because it was already GETDEL'd when the
-  // phone confirmed the pairing (consumePairingToken in pairing.ts).
-  let laptopJwt: string | undefined;
-  if (data.sessionId) {
-    try {
-      laptopJwt = await redis.hget<string>(redisKeys.session(data.sessionId), "laptopJwt") ?? undefined;
-    } catch {
-      // Non-fatal — laptopJwt is best-effort
+    if (!raw) {
+      return NextResponse.json({ ok: true, data: null });
     }
-  }
 
-  return NextResponse.json({ ok: true, data: { ...data, laptopJwt } });
+    const data = typeof raw === "string"
+      ? JSON.parse(raw) as { pairingUrl: string; expiresAt: number; pairingToken?: string | null; sessionId?: string | null }
+      : raw as { pairingUrl: string; expiresAt: number; pairingToken?: string | null; sessionId?: string | null };
+
+    if (data.expiresAt < Date.now()) {
+      await redis.del(ACTIVE_QR_KEY);
+      return NextResponse.json({ ok: true, data: null });
+    }
+
+    let laptopJwt: string | undefined;
+    if (data.sessionId) {
+      try {
+        laptopJwt = await redis.hget<string>(redisKeys.session(data.sessionId), "laptopJwt") ?? undefined;
+      } catch {
+        // Non-fatal — laptopJwt is best-effort
+      }
+    }
+
+    return NextResponse.json({ ok: true, data: { ...data, laptopJwt } });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "active_qr_get_failed", errorType: error instanceof Error ? error.name : "unknown" }));
+    return NextResponse.json({ ok: false, error: "service unavailable" }, { status: 503 });
+  }
 }

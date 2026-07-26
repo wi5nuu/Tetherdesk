@@ -392,6 +392,11 @@ export default function ControlPage() {
     ];
 
     // Wire in TURN if configured
+    // NOTE (S-5): NEXT_PUBLIC_ env vars are embedded in the client bundle by Next.js.
+    // This is intentional — WebRTC ICE requires the client to have TURN credentials at
+    // connection time. The credentials are ephemeral (short TTL) and scoped to relay-only.
+    // Server-side credential rotation (via /api/turn-credentials) should replace this in
+    // production to avoid long-lived credentials in the bundle.
     const turnUrl = process.env["NEXT_PUBLIC_TURN_URL"];
     const turnUsername = process.env["NEXT_PUBLIC_TURN_USERNAME"];
     const turnCredential = process.env["NEXT_PUBLIC_TURN_CREDENTIAL"];
@@ -539,19 +544,18 @@ export default function ControlPage() {
   }, []);
 
   // Show a hint if connected but no video frames arrive within 8 seconds
-  const videoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showVideoHint, setShowVideoHint] = useState(false);
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
     if (connState === "connected" && !videoReceived) {
-      videoTimeoutRef.current = setTimeout(() => {
-        // If still no video after timeout, videoReceived stays false — render shows hint
+      timer = setTimeout(() => {
+        setShowVideoHint(true);
       }, 8_000);
-    }
-    if (videoReceived && videoTimeoutRef.current) {
-      clearTimeout(videoTimeoutRef.current);
-      videoTimeoutRef.current = null;
+    } else {
+      setShowVideoHint(false);
     }
     return () => {
-      if (videoTimeoutRef.current) clearTimeout(videoTimeoutRef.current);
+      if (timer) clearTimeout(timer);
     };
   }, [connState, videoReceived]);
 
@@ -772,8 +776,8 @@ export default function ControlPage() {
         </div>
       )}
 
-      {/* No video hint — data channel works but video not received */}
-      {connState === "connected" && !videoReceived && (
+      {/* No video hint — data channel works but video not received after 8s */}
+      {connState === "connected" && showVideoHint && (
         <div style={styles.videoHint}>
           <span style={{ fontSize: 13, color: "#fbbf24" }}>&#9888;</span>
           <span style={styles.videoHintText}>

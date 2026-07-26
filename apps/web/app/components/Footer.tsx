@@ -37,12 +37,8 @@ export function Footer() {
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 32, paddingTop: 24, borderTop: "1px solid #141414", flexWrap: "wrap", fontSize: 12, color: "#444" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 32, paddingTop: 24, borderTop: "1px solid #141414", flexWrap: "wrap", fontSize: 12, color: "#555" }}>
           <span>{tr.footer.built}</span>
-          <div style={{ display: "flex", gap: 16, marginLeft: "auto" }}>
-            <a href="https://github.com/wi5nuu/Tetherdesk" className="link-hover" style={fl("#555")} target="_blank" rel="noopener noreferrer">GitHub</a>
-            <Link href="/docs" className="link-hover" style={fl("#555")}>{n.docs}</Link>
-          </div>
         </div>
       </div>
     </footer>

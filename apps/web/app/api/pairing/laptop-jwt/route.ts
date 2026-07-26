@@ -22,20 +22,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "missing sessionId or pairingToken" }, { status: 400 });
   }
 
-  const redis = getRedis();
-  const sessionKey = redisKeys.session(sessionId);
-  const pairKey = redisKeys.pairing(pairingToken);
+  try {
+    const redis = getRedis();
+    const sessionKey = redisKeys.session(sessionId);
+    const pairKey = redisKeys.pairing(pairingToken);
 
-  // Verify the pairing token exists and points to this session
-  const pairRecord = await redis.hgetall<Record<string, string>>(pairKey);
-  if (!pairRecord || pairRecord.sessionId !== sessionId) {
-    return NextResponse.json({ ok: false, error: "invalid pairing token for session" }, { status: 401 });
+    const pairRecord = await redis.hgetall<Record<string, string>>(pairKey);
+    if (!pairRecord || pairRecord.sessionId !== sessionId) {
+      return NextResponse.json({ ok: false, error: "invalid pairing token for session" }, { status: 401 });
+    }
+
+    const laptopJwt = await redis.hget<string>(sessionKey, "laptopJwt");
+    if (!laptopJwt) {
+      return NextResponse.json({ ok: false, error: "no laptop token found for session" }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true, data: { laptopJwt } });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "laptop_jwt_failed", sessionId, pairingToken, errorType: error instanceof Error ? error.name : "unknown" }));
+    return NextResponse.json({ ok: false, error: "service unavailable" }, { status: 503 });
   }
-
-  const laptopJwt = await redis.hget<string>(sessionKey, "laptopJwt");
-  if (!laptopJwt) {
-    return NextResponse.json({ ok: false, error: "no laptop token found for session" }, { status: 404 });
-  }
-
-  return NextResponse.json({ ok: true, data: { laptopJwt } });
 }

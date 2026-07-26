@@ -22,8 +22,10 @@ export function DonateModal({ onClose }: { onClose: () => void }) {
 
   // Prevent body scroll
   useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
+    if (typeof document !== "undefined") {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
   }, []);
 
   return (

@@ -1,6 +1,6 @@
 import type { NextRequest, NextResponse } from "next/server";
 import { ErrorCode, type ApiResponse } from "@tetherdesk/protocol";
-import { jsonError, jsonOk, parseJsonBody } from "@/lib/http";
+import { getClientIp, jsonError, jsonOk, parseJsonBody } from "@/lib/http";
 import { pairingConfirmSchema } from "@/lib/validation";
 import { confirmPairing } from "@/lib/pairing";
 import { checkPairingConfirmRateLimit } from "@/lib/rateLimit";
@@ -14,14 +14,7 @@ export async function POST(
   request: NextRequest,
 ): Promise<NextResponse<ApiResponse<{ sessionId: string; bearerToken: string }>>> {
   // Rate limit by IP (Section 15.3): 5 attempts per 15 minutes, fail-closed on Redis error.
-  // x-forwarded-for can contain a chain like "client, proxy1, proxy2" — the rightmost
-  // entry is added by the closest trusted proxy (Vercel's edge), so we take the LAST
-  // entry rather than the first to prevent clients spoofing their IP by prepending
-  // arbitrary values to the header.
-  const xffHeader = request.headers.get("x-forwarded-for");
-  const xffEntries = xffHeader ? xffHeader.split(",").map(s => s.trim()).filter(s => s) : [];
-  const ip: string = xffEntries.length > 0 ? xffEntries[xffEntries.length - 1]! : 
-                     request.headers.get("x-real-ip") ?? "unknown";
+  const ip = getClientIp(request);
   const rateLimit = await checkPairingConfirmRateLimit(ip);
   if (!rateLimit.allowed) {
     return jsonError(ErrorCode.RATE_LIMITED, "too many pairing attempts — try again later");

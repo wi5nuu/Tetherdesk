@@ -9,7 +9,7 @@ import { Footer } from "../components/Footer";
 const s: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100dvh", background: "#0a0a0a", color: "#e0e0e0",
-    fontFamily: '"Calibri", "Segoe UI", Tahoma, Geneva, sans-serif',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   container: { display: "flex", width: "100%", maxWidth: "var(--page-max)", margin: "0 auto", padding: "0 var(--page-padding)", gap: 40, position: "relative" as const },
   sidebar: {

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useLang } from "../../lib/lang-context";
 
 const APP_VERSION = "2.1.28";
@@ -10,6 +11,7 @@ export type NavbarVariant = "landing" | "default";
 
 export function Navbar({ variant = "default", onDonate }: { variant?: NavbarVariant; onDonate?: () => void }) {
   const [menu, setMenu] = useState(false);
+  const pathname = usePathname();
   const { tr } = useLang();
   const n = tr.nav;
 
@@ -38,11 +40,20 @@ export function Navbar({ variant = "default", onDonate }: { variant?: NavbarVari
 
         {/* Desktop nav */}
         <div className="navbar-desktop-links" style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          {links.map((l) => (
-            <Link key={l.label} href={l.href} className="navbar-link" style={{ color: "#888", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>
-              {l.label}
-            </Link>
-          ))}
+          {links.map((l) => {
+            const isActive = pathname === l.href;
+            return (
+              <Link
+                key={l.label}
+                href={l.href}
+                className="navbar-link"
+                aria-current={isActive ? "page" : undefined}
+                style={{ color: isActive ? "#4ade80" : "#888", textDecoration: "none", fontSize: 14, fontWeight: 500 }}
+              >
+                {l.label}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Right side */}
@@ -58,7 +69,7 @@ export function Navbar({ variant = "default", onDonate }: { variant?: NavbarVari
                 <button
                   onClick={onDonate}
                   className="navbar-desktop-links btn-secondary"
-                  style={{ display: "none", alignItems: "center", gap: 6, padding: "6px 14px", background: "transparent", border: "1px solid #2a2a2a", borderRadius: 6, color: "#888", fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s" }}
+                  style={{ alignItems: "center", gap: 6, padding: "6px 14px", background: "transparent", border: "1px solid #2a2a2a", borderRadius: 6, color: "#888", fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s" }}
                 >
                   ♥ {n.donate}
                 </button>

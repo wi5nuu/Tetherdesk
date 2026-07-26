@@ -20,7 +20,44 @@
  */
 
 import { createRequire } from "node:module";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
 const _require = createRequire(import.meta.url);
+
+// ---------------------------------------------------------------------------
+// Helper: try to resolve @roamhq/wrtc from multiple locations
+// ---------------------------------------------------------------------------
+
+type WrtcModule = {
+  RTCPeerConnection: new (cfg?: RTCConfiguration) => RTCPeerConnection;
+  MediaStream: new () => { addTrack(t: MediaStreamTrack): void };
+  nonstandard?: { RTCVideoSource: new () => { createTrack(): MediaStreamTrack; onFrame(f: { width: number; height: number; data: Uint8ClampedArray }): void } };
+};
+
+export function tryRequireWrtc(): WrtcModule | null {
+  // 1. Try local/bundle node_modules
+  try {
+    return _require("@roamhq/wrtc") as WrtcModule;
+  } catch { /* ignore */ }
+
+  // 2. Try global npm path (Windows)
+  const globalPaths = [
+    process.platform === "win32"
+      ? join(process.env.APPDATA || "", "npm", "node_modules", "@roamhq", "wrtc")
+      : join(homedir(), ".npm-global", "node_modules", "@roamhq", "wrtc"),
+    // 3. Try npm global root
+    join(process.execPath.replace(/\\node\.exe$/i, ""), "..", "lib", "node_modules", "@roamhq", "wrtc"),
+  ];
+
+  for (const p of globalPaths) {
+    try {
+      return _require(p) as WrtcModule;
+    } catch { /* ignore */ }
+  }
+
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // Load @roamhq/wrtc in Node.js environment
@@ -30,12 +67,11 @@ let _RTCPeerConnection: (new (cfg?: RTCConfiguration) => RTCPeerConnection) | nu
 let _MediaStream: (new () => { addTrack(t: MediaStreamTrack): void }) | null = null;
 
 try {
-  const wrtc = _require("@roamhq/wrtc") as {
-    RTCPeerConnection: new (cfg?: RTCConfiguration) => RTCPeerConnection;
-    MediaStream: new () => { addTrack(t: MediaStreamTrack): void };
-  };
-  _RTCPeerConnection = wrtc.RTCPeerConnection;
-  _MediaStream = wrtc.MediaStream;
+  const wrtc = tryRequireWrtc();
+  if (wrtc) {
+    _RTCPeerConnection = wrtc.RTCPeerConnection;
+    _MediaStream = wrtc.MediaStream;
+  }
 } catch {
   // @roamhq/wrtc not installed — peer connections will throw at createOffer()
   // with a clear message rather than a mysterious "RTCPeerConnection is not defined".

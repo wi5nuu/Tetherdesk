@@ -12,7 +12,7 @@ import { Footer } from "./components/Footer";
 /* ------------------------------------------------------------------ */
 
 const s = {
-  page: { background: "#0a0a0a", color: "#e0e0e0", fontFamily: '"Calibri", "Segoe UI", Tahoma, Geneva, sans-serif', minHeight: "100dvh", overflowX: "hidden" as const } as React.CSSProperties,
+  page: { background: "#0a0a0a", color: "#e0e0e0", fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', minHeight: "100dvh", overflowX: "hidden" as const } as React.CSSProperties,
   wrap: { width: "100%", maxWidth: "var(--page-max)", margin: "0 auto", padding: "0 var(--page-padding)" } as React.CSSProperties,
   mono: { fontFamily: '"SF Mono", "Fira Code", "Roboto Mono", monospace' } as React.CSSProperties,
   btn: { display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 8, fontWeight: 600, fontSize: 15, cursor: "pointer", border: "none", transition: "all 0.15s", textDecoration: "none" } as React.CSSProperties,
@@ -126,7 +126,7 @@ function TerminalDemo() {
           </div>
           <div style={{ padding: "16px 20px", ...s.mono, fontSize: 13, lineHeight: 1.7 }}>
             {lines.map((l, i) => (
-              <div key={i} style={{ color: l.color ?? (l.dim !== false ? "#888" : "#ccc"), whiteSpace: "pre-wrap" }}>{l.text}</div>
+              <div key={i} style={{ color: l.color ?? (l.dim ? "#888" : "#ccc"), whiteSpace: "pre-wrap" }}>{l.text}</div>
             ))}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
               {["E2E Encrypted", "P2P WebRTC", "Open Source"].map((label) => (
@@ -211,7 +211,7 @@ function HowItWorks() {
         <p style={{ ...s.p, margin: "0 auto 48px", ...s.center }}>{h.subtitle}</p>
         <div className="landing-grid" style={s.grid3}>
           {h.steps.map((step) => (
-            <div key={step.num} className="card-hover" style={{ textAlign: "center", padding: 32, borderRadius: 12 }}>
+            <div key={step.num} className="card-hover" style={{ textAlign: "center", padding: 32, borderRadius: 12, background: "#0f0f0f", border: "1px solid #1a1a1a" }}>
               <div style={{ fontSize: 48, fontWeight: 800, color: "#4ade80", opacity: 0.2, marginBottom: 16 }}>{step.num}</div>
               <h3 style={s.h3}>{step.title}</h3>
               <p style={{ ...s.p, fontSize: 14, margin: "10px auto 0" }}>{step.desc}</p>
@@ -232,20 +232,15 @@ function CliDemo() {
   const c = tr.cta;
 
   const output = [
-    "$ npx tetherdesk",
-    "",
-    "  TetherDesk agent starting...",
-    "  Signaling connected  ✓",
-    "",
-    "  Access key (expires in 90s):",
-    "  TD-A3F7K2",
-    "",
-    "  Steps:",
-    "  1. Open:  https://tetherdesk-five.vercel.app/access",
-    "  2. Enter key above in the \"Access Key\" field",
-    "  3. Click Allow on this laptop when prompted",
-    "",
-    "  (Key expires in 90 seconds — a new one will appear automatically)",
+    { text: "# Option 1: Run instantly with npx (no installation required)", dim: true },
+    { text: "$ npx tetherdesk", dim: false, color: "#4ade80" },
+    { text: "", dim: false },
+    { text: "# Option 2: Install globally for daily use", dim: true },
+    { text: "$ npm install -g tetherdesk", dim: false, color: "#60a5fa" },
+    { text: "$ tetherdesk", dim: false, color: "#4ade80" },
+    { text: "", dim: false },
+    { text: "# Check status at any time", dim: true },
+    { text: "$ tetherdesk status", dim: false, color: "#ccc" },
   ];
 
   return (
@@ -259,18 +254,12 @@ function CliDemo() {
               <div className="landing-terminal-dot" style={{ background: "#f87171" }} />
               <div className="landing-terminal-dot" style={{ background: "#fbbf24" }} />
               <div className="landing-terminal-dot" style={{ background: "#4ade80" }} />
-              <span style={{ color: "#555", fontSize: 12, marginLeft: 8 }}>terminal</span>
+              <span style={{ color: "#555", fontSize: 12, marginLeft: 8 }}>quickstart — bash</span>
             </div>
             <div style={{ padding: "16px 20px", ...s.mono, fontSize: 13, lineHeight: 1.7 }}>
-              {output.map((l, i) => {
-                const isGreen = l.includes("✓") || l.includes("starting");
-                const isYellow = l === "  TD-A3F7K2";
-                const isDim = l.startsWith("$") || l.startsWith("  (");
-                const color = isYellow ? "#facc15" : isGreen ? "#4ade80" : isDim ? "#888" : "#ccc";
-                return (
-                  <div key={i} style={{ color, whiteSpace: "pre-wrap" }}>{l}</div>
-                );
-              })}
+              {output.map((l, i) => (
+                <div key={i} style={{ color: l.color ?? (l.dim ? "#666" : "#ccc"), whiteSpace: "pre-wrap" }}>{l.text}</div>
+              ))}
             </div>
           </div>
           <div style={{ ...s.flexCenter, gap: 10, marginTop: 32 }}>
@@ -293,7 +282,7 @@ export default function LandingPage() {
 
   return (
     <div style={s.page}>
-      <Navbar onDonate={() => setShowDonate(true)} />
+      <Navbar variant="landing" onDonate={() => setShowDonate(true)} />
       <Hero />
       <TerminalDemo />
       <WhyChoose />

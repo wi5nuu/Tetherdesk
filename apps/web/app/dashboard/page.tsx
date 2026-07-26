@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { generateX25519KeyPair, toBase64Url } from "@tetherdesk/crypto";
 import { useToast } from "../../lib/toast";
 import { useLang } from "../../lib/lang-context";
 import { Navbar } from "../components/Navbar";
@@ -35,32 +34,10 @@ type ActivityEvent = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function base64UrlEncode(str: string): string {
-  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
 function base64UrlDecode(str: string): string {
   let s = str.replace(/-/g, "+").replace(/_/g, "/");
   while (s.length % 4) s += "=";
   return atob(s);
-}
-
-function getBackendOrigin(): string {
-  if (typeof window === "undefined") return "";
-  return window.location.origin;
-}
-
-async function getQrOrigin(): Promise<string> {
-  const origin = window.location.origin;
-  if (!origin.includes("localhost") && !origin.includes("127.0.0.1")) return origin;
-  try {
-    const resp = await fetch("/api/lan-ip", { cache: "no-store" });
-    if (resp.ok) {
-      const data = (await resp.json()) as { ok: boolean; data?: { lanIp: string; port: number } };
-      if (data.ok && data.data?.lanIp) return `http://${data.data.lanIp}:${data.data.port}`;
-    }
-  } catch { /* fall through */ }
-  return origin;
 }
 
 function stageLabel(stage: ActivityEvent["stage"]): string {
@@ -159,10 +136,13 @@ export default function HomePage() {
         if (!resp.ok) return; // 404 = no request yet, keep polling
         const json = (await resp.json()) as {
           ok: boolean;
-          data?: { status: "pending" | "approved" | "declined"; sessionId?: string; requestedAt?: number };
+          data?: { status: "idle" | "pending" | "approved" | "declined"; sessionId?: string; requestedAt?: number };
         };
         if (!json.ok || !json.data) return;
         const { status, requestedAt } = json.data;
+
+        // idle means no phone request yet — keep polling silently
+        if (status === "idle") return;
 
         if (status === "pending") {
           setApproval({ status: "pending", sessionId, requestedAt: requestedAt ?? Date.now() });
@@ -209,9 +189,8 @@ export default function HomePage() {
         const data = await resp.json().catch(() => null) as { error?: string } | null;
         addToast("error", data?.error ?? `Approval failed (HTTP ${resp.status}) — try QR Baru`);
       }
-    } catch (err) {
+    } catch {
       addToast("error", "Failed to respond to approval request");
-      console.error("Failed to respond to approval:", err);
     }
   }, [addToast]);
 
@@ -257,7 +236,7 @@ export default function HomePage() {
           const remaining = Math.ceil((expiresAt - Date.now()) / 1000);
           setTimeLeft(remaining);
           setQr({ phase: "ready", qrDataUrl, pairingUrl, expiresAt });
-          addToast("success", "QR code generated — scan with your phone");
+          addToast("success", d.newQr + " — scan with your phone");
           if (refreshRef.current) clearTimeout(refreshRef.current);
           const msLeft = expiresAt - Date.now() - 5_000;
           refreshRef.current = setTimeout(() => { void generateQr(); }, Math.max(msLeft, 2_000));
@@ -265,52 +244,16 @@ export default function HomePage() {
         }
       }
 
-      // Step 2: Agent not running — generate a standalone QR (fallback mode)
+      // Step 2: Agent not running yet — set agentOnline to false and poll every 3s to detect when agent starts
       setAgentOnline(false);
-      const backendOrigin = getBackendOrigin();
-      const qrOrigin = await getQrOrigin();
-      const laptopIdentity = generateX25519KeyPair();
-      const laptopEphemeral = generateX25519KeyPair();
-      const laptopPubKey = toBase64Url(laptopIdentity.publicKey);
-      const laptopEphemeralPubKey = toBase64Url(laptopEphemeral.publicKey);
-
-      const resp = await fetch(`${backendOrigin}/api/pairing/start`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ laptopPubKey, laptopEphemeralPubKey }),
-      });
-
-      if (!resp.ok) throw new Error(`Pairing start failed: HTTP ${resp.status}`);
-
-      const data = (await resp.json()) as { ok: boolean; data?: { sessionId: string; pairingToken: string; bearerToken: string } };
-      if (!data.ok || !data.data) throw new Error("Invalid response from pairing/start");
-
-      const { sessionId, pairingToken, bearerToken } = data.data;
-      // Store the laptop JWT so we can authenticate approval responses
-      if (bearerToken) laptopJwtRef.current = bearerToken;
-      startApprovalPolling(sessionId);
-
-      const qrPayload = JSON.stringify({ backendOrigin: qrOrigin, pairingToken, sessionId, laptopEphemeralPubKey });
-      const b64 = base64UrlEncode(qrPayload);
-      const pairingUrl = `${qrOrigin}/pair/${b64}`;
-      const expiresAt = Date.now() + 90_000;
-
-      const qrDataUrl = await QRCode.toDataURL(pairingUrl, {
-        width: 300, margin: 2,
-        color: { dark: "#000000", light: "#ffffff" },
-        errorCorrectionLevel: "M",
-      });
-
-      setQr({ phase: "ready", qrDataUrl, pairingUrl, expiresAt });
-      addToast("success", "QR code ready — scan with your phone");
+      setQr({ phase: "loading" });
       if (refreshRef.current) clearTimeout(refreshRef.current);
-      refreshRef.current = setTimeout(() => { void generateQr(); }, 80_000);
+      refreshRef.current = setTimeout(() => { void generateQr(); }, 3_000);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      setQr({ phase: "error", message: msg });
-      addToast("error", `QR generation failed: ${msg}`);
+      const errMsg = err instanceof Error ? err.message : "Unknown error";
+      setQr({ phase: "error", message: errMsg });
     }
-  }, [startApprovalPolling, addToast]);
+  }, [startApprovalPolling, addToast, d.newQr]);
 
   // --------------------------------------------------------------------------
   // API key generation
@@ -401,7 +344,7 @@ export default function HomePage() {
                 <span style={s.modalLabel}>{d.approvalTitle}</span>
               </div>
               <h2 id="approval-title" style={s.modalTitle}>
-                {d.approvalBody}
+                {d.approvalTitle}
               </h2>
               <p id="approval-desc" style={s.modalBody}>
                 {d.approvalBody}
@@ -453,10 +396,6 @@ export default function HomePage() {
         {/* Sidebar */}
         <nav className={`dashboard-sidebar ${sidebarOpen ? 'dashboard-sidebar-open' : ''}`} style={s.sidebar} aria-label="TetherDesk navigation">
         <div style={s.sidebarTop}>
-          <div style={s.logo}>
-            <span style={s.logoMark}>TD</span>
-            <span style={s.logoText}>TetherDesk</span>
-          </div>
             <div style={s.navSection}>
               <div style={s.navLabel}>Connection</div>
               <div className="nav-item-hover" style={{ ...s.navItem, ...s.navItemActive }}>
@@ -482,7 +421,7 @@ export default function HomePage() {
               </div>
             </div>
         </div>
-        <div style={s.sidebarBottom}>
+        <div style={{ padding: "0 16px" }}>
           <div style={s.agentRow}>
             <span
               style={{
@@ -536,7 +475,7 @@ export default function HomePage() {
             }}
             role="status"
           >
-            &#10003; {d.approved} &mdash; remote session is active
+            {d.approved} {"\u2014"} remote session is active
           </div>
         )}
         {approval.status === "declined" && (
@@ -549,7 +488,7 @@ export default function HomePage() {
             }}
             role="status"
           >
-            &times; {d.declined}
+            {d.declined}
           </div>
         )}
 
@@ -558,15 +497,15 @@ export default function HomePage() {
           {hasActiveClient ? (
             <div className="card-hover" style={s.card}>
               <div style={s.cardHeader}>
-                <span style={{ ...s.cardIcon, color: "#4ade80" }}>&#10003;</span>
+                <span style={{ ...s.cardIcon, color: "#4ade80" }}>&#9635;</span>
                 <div>
-                <div style={s.cardTitle}>{"\u2713 " + d.qrTitle}</div>
-                <div style={s.cardSub}>{d.clientsSub}</div>
+                  <div style={s.cardTitle}>{d.qrTitle}</div>
+                  <div style={s.cardSub}>{d.clientsSub}</div>
                 </div>
               </div>
               <div style={{ padding: "16px 20px", textAlign: "center" }}>
-                <div style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>
-                  {d.noClientsHint}
+                <div style={{ fontSize: 13, color: "#4ade80", marginBottom: 8, fontWeight: 500 }}>
+                  &#10003; {d.approved}
                 </div>
                 <button
                   className="btn-secondary"
@@ -662,7 +601,8 @@ export default function HomePage() {
                   rel="noopener noreferrer"
                   style={s.btnSecondary}
                 >
-                  {d.openOnPhone}                </a>
+                  {d.openOnPhone}
+                </a>
               )}
             </div>
           </div>
@@ -687,7 +627,7 @@ export default function HomePage() {
                   <div style={{ ...s.clientDot, background: "#4ade80" }} />
                   <div style={s.clientInfo}>
                     <div style={s.clientName}>Phone</div>
-                    <div style={s.clientMeta}>Approved just now</div>
+                    <div style={s.clientMeta}>{d.approved}</div>
                   </div>
                   <span
                     style={{
@@ -741,7 +681,7 @@ export default function HomePage() {
                 <div style={s.cardSub}>{d.howSubtitle}</div>
               </div>
             </div>
-            <ol style={s.steps}>
+            <ol className="dashboard-steps">
               <li style={s.step}>
                 <div style={s.stepNum}>1</div>
                 <div>
@@ -892,37 +832,6 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 14,
     position: "relative",
   },
-  hamburger: {
-    display: "none",
-    position: "fixed",
-    top: 16,
-    left: 16,
-    zIndex: 1001,
-    background: "#0d0d0d",
-    border: "1px solid #1a1a1a",
-    borderRadius: 8,
-    padding: 12,
-    cursor: "pointer",
-    flexDirection: "column",
-    gap: 4,
-  },
-  hamburgerLine: {
-    width: 20,
-    height: 2,
-    backgroundColor: "#e0e0e0",
-    borderRadius: 2,
-    transition: "all 0.3s",
-  },
-  sidebarOverlay: {
-    display: "none",
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    zIndex: 999,
-  },
   sidebar: {
     width: 220,
     flexShrink: 0,
@@ -931,45 +840,11 @@ const s: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
-    padding: "20px 0",
-  },
-  sidebarOpen: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    transform: "translateX(0)",
+    padding: "16px 0",
+    minHeight: 0,
   },
   sidebarTop: { display: "flex", flexDirection: "column", gap: 8 },
-  sidebarBottom: { padding: "0 16px" },
-  logo: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "0 16px 16px",
-    borderBottom: "1px solid #1a1a1a",
-    marginBottom: 8,
-  },
-  logoMark: {
-    width: 28,
-    height: 28,
-    backgroundColor: "#4ade80",
-    color: "#0a0a0a",
-    borderRadius: 6,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 11,
-    fontWeight: 800,
-    flexShrink: 0,
-  },
-  logoText: {
-    fontSize: 15,
-    fontWeight: 700,
-    color: "#f0f0f0",
-    letterSpacing: "-0.02em",
-  },
-  navSection: { padding: "8px 0" },
+  navSection: { padding: "6px 0" },
   navLabel: {
     padding: "4px 16px",
     fontSize: 10,

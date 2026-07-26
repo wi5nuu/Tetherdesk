@@ -47,23 +47,40 @@ function keyLabel(key: string): string {
 // Body: { sessionId?: string }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // Auth is optional for POST — the dashboard UI generates keys without a session JWT.
-  // If a valid JWT is present we bind the key to that session; otherwise we accept a
-  // sessionId in the body (agent secret path) or create a fresh anonymous session.
   const auth = await authenticateRequest(request);
 
+  // Require authentication: either a valid laptop JWT or the agent secret.
+  // Without this check, anyone on the internet can call POST /api/access/keys
+  // and get a persistent API key tied to a new anonymous session — bypassing
+  // the entire pairing flow and gaining permanent dashboard access.
+  if (!auth.ok && !verifyAgentSecret(request)) {
+    return jsonError(ErrorCode.UNAUTHORIZED, "authentication required", 401);
+  }
+
   const body = await parseBody(request);
-  const redis = getRedis();
 
-  let sessionId: string;
+  try {
+    const redis = getRedis();
 
-  if (auth.ok) {
-    sessionId = auth.claims.sessionId;
-  } else if (body && typeof body.sessionId === "string" && body.sessionId) {
-    sessionId = body.sessionId;
-    const sessionKey = redisKeys.session(sessionId);
-    const exists = await redis.exists(sessionKey);
-    if (!exists) {
+    let sessionId: string;
+
+    if (auth.ok) {
+      sessionId = auth.claims.sessionId;
+    } else if (body && typeof body.sessionId === "string" && body.sessionId) {
+      // Agent secret path: accept sessionId from body (used by agent provisioning)
+      sessionId = body.sessionId;
+      const sessionKey = redisKeys.session(sessionId);
+      const exists = await redis.exists(sessionKey);
+      if (!exists) {
+        sessionId = generateSessionId();
+        const now = Date.now();
+        await redis.hset(redisKeys.session(sessionId), {
+          state: "pending",
+          createdAt: now,
+          lastActiveAt: now,
+        });
+      }
+    } else {
       sessionId = generateSessionId();
       const now = Date.now();
       await redis.hset(redisKeys.session(sessionId), {
@@ -72,30 +89,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         lastActiveAt: now,
       });
     }
-  } else {
-    sessionId = generateSessionId();
-    const now = Date.now();
-    await redis.hset(redisKeys.session(sessionId), {
-      state: "pending",
+
+    const apiKey = generateApiKey();
+    const now = new Date().toISOString();
+
+    await redis.set(`${API_KEY_VALUE_PREFIX}${apiKey}`, sessionId);
+
+    const indexKey = `${API_KEY_INDEX_PREFIX}${sessionId}`;
+    await redis.sadd(indexKey, apiKey);
+
+    return jsonOk({
+      apiKey,
+      label: keyLabel(apiKey),
       createdAt: now,
-      lastActiveAt: now,
+      sessionId,
     });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "api_key_create_failed", errorType: error instanceof Error ? error.name : "unknown" }));
+    return jsonError(ErrorCode.STORE_UNAVAILABLE, "service unavailable — please try again later", 503);
   }
-
-  const apiKey = generateApiKey();
-  const now = new Date().toISOString();
-
-  await redis.set(`${API_KEY_VALUE_PREFIX}${apiKey}`, sessionId);
-
-  const indexKey = `${API_KEY_INDEX_PREFIX}${sessionId}`;
-  await redis.sadd(indexKey, apiKey);
-
-  return jsonOk({
-    apiKey,
-    label: keyLabel(apiKey),
-    createdAt: now,
-    sessionId,
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -112,16 +124,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return jsonError(ErrorCode.VALIDATION_FAILED, "sessionId query parameter is required");
   }
 
-  const redis = getRedis();
-  const indexKey = `${API_KEY_INDEX_PREFIX}${sessionId}`;
-  const keys = await redis.smembers(indexKey);
+  try {
+    const redis = getRedis();
+    const indexKey = `${API_KEY_INDEX_PREFIX}${sessionId}`;
+    const keys = await redis.smembers(indexKey);
 
-  const items = (keys ?? []).map((key: string) => ({
-    label: keyLabel(key),
-    createdAt: "",
-  }));
+    const items = (keys ?? []).map((key: string) => ({
+      label: keyLabel(key),
+      createdAt: "",
+    }));
 
-  return jsonOk({ keys: items, total: items.length });
+    return jsonOk({ keys: items, total: items.length });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "api_key_list_failed", sessionId, errorType: error instanceof Error ? error.name : "unknown" }));
+    return jsonError(ErrorCode.STORE_UNAVAILABLE, "service unavailable — please try again later", 503);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -140,17 +157,22 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
   }
 
   const { apiKey } = body;
-  const redis = getRedis();
 
-  const sessionId = await redis.get(`${API_KEY_VALUE_PREFIX}${apiKey}`);
-  if (!sessionId || typeof sessionId !== "string") {
-    return jsonError(ErrorCode.UNAUTHORIZED, "API key not found");
+  try {
+    const redis = getRedis();
+
+    const sessionId = await redis.get(`${API_KEY_VALUE_PREFIX}${apiKey}`);
+    if (!sessionId || typeof sessionId !== "string") {
+      return jsonError(ErrorCode.UNAUTHORIZED, "API key not found");
+    }
+
+    const indexKey = `${API_KEY_INDEX_PREFIX}${sessionId}`;
+    await redis.srem(indexKey, apiKey);
+    await redis.del(`${API_KEY_VALUE_PREFIX}${apiKey}`);
+
+    return jsonOk({ revoked: apiKey });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "api_key_revoke_failed", apiKey, errorType: error instanceof Error ? error.name : "unknown" }));
+    return jsonError(ErrorCode.STORE_UNAVAILABLE, "service unavailable — please try again later", 503);
   }
-
-  const indexKey = `${API_KEY_INDEX_PREFIX}${sessionId}`;
-  await redis.srem(indexKey, apiKey);
-
-  await redis.del(`${API_KEY_VALUE_PREFIX}${apiKey}`);
-
-  return jsonOk({ revoked: apiKey });
 }

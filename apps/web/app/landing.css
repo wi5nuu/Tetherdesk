@@ -63,16 +63,12 @@
   font-size: 16px;
 }
 @media (min-width: 768px) {
-  .landing-nav-desktop { display: flex !important; }
-  .landing-menu-btn { display: none !important; }
   .landing-table th,
   .landing-table td {
     padding: 14px 20px;
   }
 }
 @media (max-width: 767px) {
-  .landing-nav-desktop { display: none !important; }
-  .landing-menu-btn { display: flex !important; }
   .landing-table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;

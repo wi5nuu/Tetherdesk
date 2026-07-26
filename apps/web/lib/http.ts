@@ -32,3 +32,17 @@ export async function parseJsonBody(request: Request): Promise<unknown> {
     return undefined;
   }
 }
+
+/** Safely extracts the client IP address from a request, checking x-real-ip first then x-forwarded-for client IP. */
+export function getClientIp(request: Request): string {
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp && realIp.length > 0) return realIp;
+
+  const xff = request.headers.get("x-forwarded-for");
+  if (xff) {
+    const ips = xff.split(",").map((s) => s.trim()).filter(Boolean);
+    if (ips.length > 0) return ips[0]!;
+  }
+
+  return "127.0.0.1";
+}

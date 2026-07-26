@@ -9,6 +9,7 @@ import {
 } from "@tetherdesk/crypto";
 import type { PairingQrPayload, ApiResponse, SignalingPayload, ControlMessage } from "@tetherdesk/protocol";
 import { decodeInputEvent } from "@tetherdesk/protocol";
+import { tryRequireWrtc } from "./webrtc/peer.js";
 import { AgentMailbox } from "./signaling/mailbox.js";
 import { WebSocketTransport, PollingTransport } from "./signaling/client.js";
 import { AgentPeer, DEFAULT_STUN_SERVERS } from "./webrtc/peer.js";
@@ -427,7 +428,7 @@ export class TetherDeskAgent {
 
           void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "success", stage: "keyexchange", message: "Key exchange complete — secure session established", sessionId });
           resolve();
-        } catch (err) {
+    } catch (err) {
           reject(err instanceof Error ? err : new Error(String(err)));
         }
       };
@@ -560,14 +561,8 @@ export class TetherDeskAgent {
     let videoTrack: MediaStreamTrack | null = null;
     try {
       if (!videoStream) throw new Error("No video stream available");
-      const wrtc = _require("@roamhq/wrtc") as {
-        nonstandard: {
-          RTCVideoSource: new () => {
-            createTrack(): MediaStreamTrack;
-            onFrame(frame: { width: number; height: number; data: Uint8ClampedArray }): void;
-          };
-        };
-      };
+      const wrtc = tryRequireWrtc();
+      if (!wrtc?.nonstandard?.RTCVideoSource) throw new Error("RTCVideoSource not available");
       const source = new wrtc.nonstandard.RTCVideoSource();
       videoTrack = source.createTrack();
 
@@ -601,7 +596,7 @@ export class TetherDeskAgent {
       })().catch((err: unknown) => {
         void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "error", stage: "webrtc", message: `Frame pump error: ${err instanceof Error ? err.message : String(err)}` });
       });
-    } catch (err) {
+    } catch {
       videoTrack = null;
     }
 
