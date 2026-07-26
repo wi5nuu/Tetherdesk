@@ -206,12 +206,25 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
           signal: AbortSignal.timeout(5_000),
         });
         if (!resp.ok) continue;
-        const json = await resp.json() as { ok: boolean; data?: { pairingUrl: string } };
+        const json = await resp.json() as { ok: boolean; data?: { pairingUrl: string; pairingToken?: string } };
         if (!json.ok || !json.data?.pairingUrl) continue;
 
-        const match = json.data.pairingUrl.match(/\/pair\/([A-Za-z0-9_-]+)/);
-        if (!match || !match[1]) continue;
-        const token = match[1];
+        // Prefer the short pairingToken stored directly; fall back to extracting
+        // it from the pairingUrl base64url payload so older agent versions still work.
+        let token: string | null = json.data.pairingToken ?? null;
+        if (!token) {
+          const match = json.data.pairingUrl.match(/\/pair\/([A-Za-z0-9_-]+)/);
+          if (match?.[1]) {
+            try {
+              const decoded = JSON.parse(Buffer.from(match[1], "base64url").toString("utf8")) as { pairingToken?: string };
+              token = decoded.pairingToken ?? null;
+            } catch {
+              // not a JSON payload — use raw segment as token
+              token = match[1];
+            }
+          }
+        }
+        if (!token) continue;
 
         console.log(pc.bold(pc.yellow("\n  ╔══════════════════════════════════╗")));
         console.log(pc.bold(pc.yellow("  ║       YOUR ACCESS KEY            ║")));

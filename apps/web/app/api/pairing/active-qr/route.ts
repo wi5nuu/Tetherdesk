@@ -15,13 +15,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const body = await parseJsonBody(request) as { pairingUrl?: string; expiresAt?: number } | undefined;
+  const body = await parseJsonBody(request) as { pairingUrl?: string; expiresAt?: number; pairingToken?: string } | undefined;
   if (!body || !body.pairingUrl || !body.expiresAt) {
     return NextResponse.json({ ok: false, error: "invalid or missing pairingUrl/expiresAt" }, { status: 400 });
   }
 
   const redis = getRedis();
-  await redis.set(ACTIVE_QR_KEY, JSON.stringify({ pairingUrl: body.pairingUrl, expiresAt: body.expiresAt }), { ex: ACTIVE_QR_TTL });
+  await redis.set(ACTIVE_QR_KEY, JSON.stringify({ pairingUrl: body.pairingUrl, expiresAt: body.expiresAt, pairingToken: body.pairingToken ?? null }), { ex: ACTIVE_QR_TTL });
 
   return NextResponse.json({ ok: true });
 }
