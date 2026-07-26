@@ -93,6 +93,9 @@ export async function POST(request: NextRequest) {
 export async function GET(_request: NextRequest) {
   const encoder = new TextEncoder();
 
+  let keepalive: NodeJS.Timeout;
+  let onEvent: (evt: ActivityEvent) => void;
+
   const stream = new ReadableStream({
     start(controller) {
       // Send all recent events as catch-up
@@ -102,7 +105,7 @@ export async function GET(_request: NextRequest) {
       }
 
       // Send keepalive comment every 15s
-      const keepalive = setInterval(() => {
+      keepalive = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(": keepalive\n\n"));
         } catch {
@@ -111,7 +114,7 @@ export async function GET(_request: NextRequest) {
       }, 15_000);
 
       // Subscribe to new events
-      const onEvent = (evt: ActivityEvent) => {
+      onEvent = (evt: ActivityEvent) => {
         try {
           const data = `data: ${JSON.stringify(evt)}\n\n`;
           controller.enqueue(encoder.encode(data));
@@ -122,12 +125,10 @@ export async function GET(_request: NextRequest) {
       };
 
       bus.on("event", onEvent);
-
-      // Cleanup when client disconnects
-      return () => {
-        bus.off("event", onEvent);
-        clearInterval(keepalive);
-      };
+    },
+    cancel() {
+      if (onEvent) bus.off("event", onEvent);
+      if (keepalive) clearInterval(keepalive);
     },
   });
 
