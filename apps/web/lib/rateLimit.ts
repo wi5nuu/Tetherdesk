@@ -90,5 +90,5 @@ export async function checkPairingConfirmRateLimit(ip: string): Promise<RateLimi
 export async function checkPollingRateLimit(ip: string, endpoint: string): Promise<RateLimitResult> {
   // Use a separate namespace for polling to avoid clashing with start/confirm
   // Scope by endpoint so polling active-qr doesn't exhaust signal/poll limits
-  return checkRateLimit(`td:rate_limit:poll:${endpoint}:${ip}`, true, 100, 60);
+  return checkRateLimit(redisKeys.rateLimitPoll(endpoint, ip), true, 100, 60);
 }

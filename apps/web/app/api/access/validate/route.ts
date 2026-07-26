@@ -27,7 +27,7 @@ function jsonError(code: string, message: string, status = 400) {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const ip = getClientIp(request);
-  const rl = await checkRateLimit(`td:ratelimit:access:validate:${ip}`, true);
+  const rl = await checkRateLimit(redisKeys.rateLimitAccessValidate(ip), true);
   if (!rl.allowed) {
     return jsonError(ErrorCode.RATE_LIMITED, "Too many attempts — try again later", 429);
   }

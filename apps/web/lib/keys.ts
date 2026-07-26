@@ -27,4 +27,8 @@ export const redisKeys = {
   approvalRequest: (sessionId: string): string => `${namespace()}:approval:req:${sessionId}`,
   // Approval result: agent polls this to know if the laptop approved or declined
   approvalResult: (sessionId: string): string => `${namespace()}:approval:res:${sessionId}`,
+  // Polling rate limit namespace isolated by endpoint
+  rateLimitPoll: (endpoint: string, ip: string): string => `${namespace()}:ratelimit:poll:${endpoint}:${ip}`,
+  // Access validation rate limit
+  rateLimitAccessValidate: (ip: string): string => `${namespace()}:ratelimit:access:validate:${ip}`,
 };
