@@ -492,6 +492,15 @@ export default function HomePage() {
           </div>
         )}
 
+        {!agentOnline ? (
+          <div style={s.offlineState}>
+            <div style={s.spinner} aria-hidden="true" />
+            <h2 style={s.offlineTitle}>Waiting for agent...</h2>
+            <p style={s.offlineDesc}>
+              Run <code style={s.monoChip}>npx tetherdesk</code> in your computer's terminal. This page will connect automatically.
+            </p>
+          </div>
+        ) : (
         <div className="dashboard-grid" style={s.grid}>
           {/* QR card — hidden when a client is already connected */}
           {hasActiveClient ? (
@@ -808,6 +817,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+        )}
       </main>
       </div>
       <Footer />
@@ -1255,5 +1265,11 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 10,
     flexShrink: 0,
   },
+  offlineState: {
+    display: "flex", flexDirection: "column", alignItems: "center",
+    justifyContent: "center", minHeight: "50vh", gap: 16, textAlign: "center",
+  },
+  offlineTitle: { fontSize: 20, fontWeight: 600, color: "#e0e0e0", margin: 0 },
+  offlineDesc: { fontSize: 14, color: "#888", maxWidth: 400, lineHeight: 1.5, margin: 0 },
 };
 

@@ -369,10 +369,14 @@ html, body {
     font-size: 32px !important;
   }
   
-  /* Landing buttons - stack vertically */
+  /* Landing buttons - wrap on mobile instead of stretching */
   .landing-buttons {
-    flex-direction: column !important;
-    align-items: stretch !important;
+    flex-wrap: wrap !important;
+  }
+  .landing-buttons > a {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
   }
   
   /* Docs page - smaller padding */
