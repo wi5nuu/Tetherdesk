@@ -56,6 +56,10 @@ export async function aeadDecrypt(
   sealed: AeadSealed,
   additionalData?: Uint8Array,
 ): Promise<Uint8Array> {
+  if (sealed.iv.length !== AES_GCM_IV_LENGTH_BYTES) {
+    throw new Error(`Invalid IV length: expected ${AES_GCM_IV_LENGTH_BYTES} bytes, got ${sealed.iv.length}`);
+  }
+
   const plaintext = await getSubtle().decrypt(
     {
       name: "AES-GCM",
