@@ -79,7 +79,20 @@ async function findAgentScript(): Promise<{ type: "binary" | "script"; path: str
     return { type: "script", path: workspacePath };
   } catch { /* not found */ }
 
-  // 4. ~/.tetherdesk/agent/main.js (installed by tetherdesk init)
+  // 4. Common dev locations — D:\TetherDesk or ~/TetherDesk
+  const commonDevPaths = [
+    join("D:\\", "TetherDesk", "apps", "agent", "dist", "main.js"),
+    join(homedir(), "TetherDesk", "apps", "agent", "dist", "main.js"),
+    join(homedir(), "Documents", "TetherDesk", "apps", "agent", "dist", "main.js"),
+  ];
+  for (const devPath of commonDevPaths) {
+    try {
+      await fsAccess(devPath);
+      return { type: "script", path: devPath };
+    } catch { /* not found */ }
+  }
+
+  // 5. ~/.tetherdesk/agent/main.js (installed by tetherdesk init)
   const installedPath = join(homedir(), ".tetherdesk", "agent", "main.js");
   try {
     await fsAccess(installedPath);
