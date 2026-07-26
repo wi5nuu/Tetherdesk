@@ -22,6 +22,9 @@ export async function GET(request: NextRequest) {
   if (!sessionId) {
     return NextResponse.json({ ok: false, error: "missing sessionId" }, { status: 400 });
   }
+  if (sessionId.length > 128) {
+    return NextResponse.json({ ok: false, error: "sessionId exceeds maximum length" }, { status: 400 });
+  }
 
   try {
     const redis = getRedis();
@@ -86,6 +89,14 @@ export async function POST(request: NextRequest) {
 
   const { sessionId, action } = body;
 
+  if (sessionId.length > 128) {
+    return NextResponse.json({ ok: false, error: "sessionId exceeds maximum length" }, { status: 400 });
+  }
+
+  if (action !== "request" && action !== "respond") {
+    return NextResponse.json({ ok: false, error: "action must be 'request' or 'respond'" }, { status: 400 });
+  }
+
   try {
     const redis = getRedis();
 
@@ -124,7 +135,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, data: { status } });
     }
 
-    return NextResponse.json({ ok: false, error: `unknown action: ${action}` }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "unhandled action" }, { status: 400 });
   } catch (error) {
     console.error(JSON.stringify({ event: "approval_post_failed", sessionId, action, errorType: error instanceof Error ? error.name : "unknown" }));
     return NextResponse.json({ ok: false, error: "service unavailable" }, { status: 503 });

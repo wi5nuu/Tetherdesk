@@ -95,4 +95,23 @@ describe("POST & GET /api/pairing/approval", () => {
     const postRes = await POST(postReq);
     expect(postRes.status).toBe(400);
   });
+
+  it("GET rejects sessionId exceeding 128 chars", async () => {
+    const longId = "x".repeat(129);
+    const req = new NextRequest(`http://localhost/api/pairing/approval?sessionId=${longId}`);
+    const res = await GET(req);
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it("POST rejects sessionId exceeding 128 chars", async () => {
+    const longId = "x".repeat(129);
+    const postReq = new NextRequest("http://localhost/api/pairing/approval", {
+      method: "POST",
+      body: JSON.stringify({ action: "request", sessionId: longId }),
+    });
+    const postRes = await POST(postReq);
+    expect(postRes.status).toBe(400);
+  });
 });

@@ -123,6 +123,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!sessionId) {
     return jsonError(ErrorCode.VALIDATION_FAILED, "sessionId query parameter is required");
   }
+  if (sessionId.length > 128) {
+    return jsonError(ErrorCode.VALIDATION_FAILED, "sessionId exceeds maximum length");
+  }
 
   try {
     const redis = getRedis();
@@ -157,6 +160,11 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
   }
 
   const { apiKey } = body;
+
+  // Validate format before using as a Redis key to prevent injection
+  if (!/^sk-[0-9a-f]{32}$/i.test(apiKey)) {
+    return jsonError(ErrorCode.VALIDATION_FAILED, "Invalid API key format");
+  }
 
   try {
     const redis = getRedis();
