@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRedis } from "@/lib/redis";
 import { redisKeys } from "@/lib/keys";
 import { verifyAgentSecret } from "@/lib/auth";
-import { parseJsonBody, getClientIp } from "@/lib/http";
+import { parseJsonBody, getClientIp, jsonError } from "@/lib/http";
 import { checkPollingRateLimit } from "@/lib/rateLimit";
+import { ErrorCode } from "@tetherdesk/protocol";
 
 export const runtime = "nodejs";
 
@@ -57,17 +58,7 @@ export async function GET(request: NextRequest) {
   const ip = getClientIp(request);
   const rateLimit = await checkPollingRateLimit(ip);
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { ok: false, error: "Too many requests" },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": String(Math.ceil(60)),
-          "X-RateLimit-Limit": String(100),
-          "X-RateLimit-Remaining": String(rateLimit.remaining),
-        },
-      }
-    );
+    return jsonError(ErrorCode.RATE_LIMITED, "Too many requests");
   }
 
   try {
