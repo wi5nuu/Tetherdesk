@@ -31,4 +31,7 @@ export const redisKeys = {
   rateLimitPoll: (endpoint: string, ip: string): string => `${namespace()}:ratelimit:poll:${endpoint}:${ip}`,
   // Access validation rate limit
   rateLimitAccessValidate: (ip: string): string => `${namespace()}:ratelimit:access:validate:${ip}`,
+  // API key storage
+  apiKey: (key: string): string => `${namespace()}:apikey:${key}`,
+  apiKeysIndex: (sessionId: string): string => `${namespace()}:apikeys:${sessionId}`,
 };

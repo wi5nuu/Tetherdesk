@@ -10,8 +10,7 @@ import { authenticateRequest, verifyAgentSecret } from "@/lib/auth";
 export const runtime = "nodejs";
 export const maxDuration = 10;
 
-const API_KEY_VALUE_PREFIX = "td:apikey:";
-const API_KEY_INDEX_PREFIX = "td:apikeys:";
+
 
 function jsonOk(data: Record<string, unknown>) {
   return NextResponse.json({ ok: true, data });
@@ -93,9 +92,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const apiKey = generateApiKey();
     const now = new Date().toISOString();
 
-    await redis.set(`${API_KEY_VALUE_PREFIX}${apiKey}`, sessionId);
+    await redis.set(redisKeys.apiKey(apiKey), sessionId);
 
-    const indexKey = `${API_KEY_INDEX_PREFIX}${sessionId}`;
+    const indexKey = redisKeys.apiKeysIndex(sessionId);
     await redis.sadd(indexKey, apiKey);
 
     return jsonOk({
@@ -129,7 +128,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   try {
     const redis = getRedis();
-    const indexKey = `${API_KEY_INDEX_PREFIX}${sessionId}`;
+    const indexKey = redisKeys.apiKeysIndex(sessionId);
     const keys = await redis.smembers(indexKey);
 
     const items = (keys ?? []).map((key: string) => ({
@@ -169,14 +168,14 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
   try {
     const redis = getRedis();
 
-    const sessionId = await redis.get(`${API_KEY_VALUE_PREFIX}${apiKey}`);
+    const sessionId = await redis.get(redisKeys.apiKey(apiKey));
     if (!sessionId || typeof sessionId !== "string") {
       return jsonError(ErrorCode.UNAUTHORIZED, "API key not found");
     }
 
-    const indexKey = `${API_KEY_INDEX_PREFIX}${sessionId}`;
+    const indexKey = redisKeys.apiKeysIndex(sessionId);
     await redis.srem(indexKey, apiKey);
-    await redis.del(`${API_KEY_VALUE_PREFIX}${apiKey}`);
+    await redis.del(redisKeys.apiKey(apiKey));
 
     return jsonOk({ revoked: apiKey });
   } catch (error) {
