@@ -249,8 +249,9 @@ export class TetherDeskAgent {
     console.log(``);
     console.log(`  Steps:`);
     console.log(`  1. Open on your phone: ${this.config.backendOrigin}/access`);
-    console.log(`  2. Enter key above`);
-    console.log(`  3. Click Allow on this laptop\n`);
+    console.log(`  2. Enter the access key above`);
+    console.log(`  3. Open dashboard: ${this.config.backendOrigin}/dashboard`);
+    console.log(`  4. Click "Allow" to approve the connection\n`);
     void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "info", stage: "pairing", message: "QR code generated — waiting for phone to scan", sessionId });
 
     // Register the pairing URL with the backend so the web page can display

@@ -194,7 +194,8 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
   console.log(pc.bold(pc.green(" TetherDesk is running!\n")));
   console.log(pc.cyan("  Dashboard: ") + pc.bold(`${backendUrl}/dashboard`));
   console.log(pc.dim("\n  Waiting for access key…"));
-  console.log(pc.dim("  Press Ctrl+C to stop.\n"));
+  console.log(pc.dim("  Press Ctrl+C to stop."));
+  console.log(pc.dim("\n  Created by Wisnu Alfian Nur Ashar\n"));
 
   // ── Poll for pairing key and print it ─────────────────────────────────────
   void (async () => {

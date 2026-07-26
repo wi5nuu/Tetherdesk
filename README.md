@@ -16,14 +16,12 @@ npx tetherdesk
 
 This single command:
 1. Starts the local agent on your laptop
-2. Shows a **QR code** in the terminal
-3. Displays an **access key** (`TD-XXXXXX`) in a box
-4. Creates a pairing session with 90-second expiry
+2. Shows an **access key** (`TD-XXXXXX`) in a box
+3. Creates a pairing session with 90-second expiry
 
 **On your phone:**
-- Scan the QR code from the terminal, **or**
 - Open `https://tetherdesk-five.vercel.app/access` and enter the `TD-XXXXXX` key, **or**
-- Open the dashboard URL shown in the terminal
+- Scan the QR code from the terminal (if terminal supports it)
 
 When prompted on your laptop, click **Allow**. Your phone now displays your laptop screen with a full control toolbar — zoom, keyboard input, modifier keys (Ctrl/Alt/Win), and special keys (Esc/Tab/Enter).
 
@@ -134,6 +132,8 @@ Then run:
 tetherdesk
 ```
 
+**What happens on install:** The `postinstall` script automatically installs `@roamhq/wrtc` globally (required for screen capture on Windows/macOS). No manual steps needed.
+
 ### One-Time Use (No Install)
 
 ```bash
@@ -146,7 +146,7 @@ This downloads and runs the latest version without installing globally. The CLI 
 
 | Command | Description |
 |---------|-------------|
-| `tetherdesk` | Start agent, show QR code + access key |
+| `tetherdesk` | Start agent, show access key |
 | `tetherdesk config [key] [value]` | View/set configuration |
 | `tetherdesk pair` | Generate fresh access key (agent must be running) |
 | `tetherdesk status` | Check if agent is running |
@@ -274,4 +274,8 @@ Built with:
 - **Upstash Redis** — Serverless Redis for pairing data
 - **Cloudflare** — TURN/STUN servers
 - **X25519/AES-GCM** — Cryptographic primitives
-- **@roamhq/wrtc** — WebRTC native bindings for Node.js agent
+- **@roamhq/wrtc** — WebRTC native bindings for Node.js agent (auto-installed)
+
+---
+
+Created by **Wisnu Alfian Nur Ashar**
