@@ -8,23 +8,23 @@ import {
 describe("pairingStartSchema", () => {
   it("accepts valid input", () => {
     const result = pairingStartSchema.safeParse({
-      laptopPubKey: "validBase64urlKey123",
-      laptopEphemeralPubKey: "anotherValidKey456",
+      laptopPubKey: "a".repeat(43),
+      laptopEphemeralPubKey: "b".repeat(43),
     });
     expect(result.success).toBe(true);
   });
 
   it("rejects missing laptopPubKey", () => {
     const result = pairingStartSchema.safeParse({
-      laptopEphemeralPubKey: "anotherValidKey456",
+      laptopEphemeralPubKey: "a".repeat(43),
     });
     expect(result.success).toBe(false);
   });
 
   it("rejects non-base64url characters", () => {
     const result = pairingStartSchema.safeParse({
-      laptopPubKey: "invalid key with spaces!",
-      laptopEphemeralPubKey: "validKey",
+      laptopPubKey: "a".repeat(42) + " ", // 43 chars but with a space
+      laptopEphemeralPubKey: "a".repeat(43),
     });
     expect(result.success).toBe(false);
   });
@@ -32,15 +32,15 @@ describe("pairingStartSchema", () => {
   it("rejects empty string fields", () => {
     const result = pairingStartSchema.safeParse({
       laptopPubKey: "",
-      laptopEphemeralPubKey: "validKey",
+      laptopEphemeralPubKey: "a".repeat(43),
     });
     expect(result.success).toBe(false);
   });
 
-  it("rejects overly long fields (> 256 chars)", () => {
+  it("rejects wrong length fields (!= 43 chars)", () => {
     const result = pairingStartSchema.safeParse({
-      laptopPubKey: "a".repeat(257),
-      laptopEphemeralPubKey: "validKey",
+      laptopPubKey: "a".repeat(42),
+      laptopEphemeralPubKey: "a".repeat(43),
     });
     expect(result.success).toBe(false);
   });
@@ -49,17 +49,26 @@ describe("pairingStartSchema", () => {
 describe("pairingConfirmSchema", () => {
   it("accepts valid input", () => {
     const result = pairingConfirmSchema.safeParse({
-      pairingToken: "tokenABC",
-      phonePubKey: "phoneKeyXYZ",
-      phoneEphemeralPubKey: "phoneEphKey123",
+      pairingToken: "a".repeat(22),
+      phonePubKey: "a".repeat(43),
+      phoneEphemeralPubKey: "a".repeat(43),
     });
     expect(result.success).toBe(true);
   });
 
   it("rejects missing pairingToken", () => {
     const result = pairingConfirmSchema.safeParse({
-      phonePubKey: "phoneKeyXYZ",
-      phoneEphemeralPubKey: "phoneEphKey123",
+      phonePubKey: "a".repeat(43),
+      phoneEphemeralPubKey: "a".repeat(43),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects wrong length token (!= 22 chars)", () => {
+    const result = pairingConfirmSchema.safeParse({
+      pairingToken: "a".repeat(21),
+      phonePubKey: "a".repeat(43),
+      phoneEphemeralPubKey: "a".repeat(43),
     });
     expect(result.success).toBe(false);
   });
