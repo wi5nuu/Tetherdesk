@@ -1,7 +1,7 @@
 {
   "name": "tetherdesk",
-  "version": "2.1.27",
-  "description": "Zero-infrastructure remote laptop control — scan QR, control your laptop from your phone",
+  "version": "2.1.28",
+  "description": "Zero-infrastructure remote laptop control — enter TD key, control your laptop from your phone",
   "license": "MIT",
   "type": "module",
   "bin": {
