@@ -187,6 +187,10 @@ export default function HomePage() {
       if (laptopJwt) {
         headers["Authorization"] = `Bearer ${laptopJwt}`;
       }
+      if (!laptopJwt) {
+        addToast("error", "Session expired — click QR Baru and pair again");
+        return;
+      }
       const resp = await fetch("/api/pairing/approval", {
         method: "POST",
         headers,
@@ -196,6 +200,9 @@ export default function HomePage() {
         setApproval({ status: approved ? "approved" : "declined", sessionId });
         addToast(approved ? "success" : "info", approved ? "Connection approved" : "Connection declined");
         if (approvalPollRef.current) { clearInterval(approvalPollRef.current); approvalPollRef.current = null; }
+      } else {
+        const data = await resp.json().catch(() => null) as { error?: string } | null;
+        addToast("error", data?.error ?? `Approval failed (HTTP ${resp.status}) — try QR Baru`);
       }
     } catch (err) {
       addToast("error", "Failed to respond to approval request");
