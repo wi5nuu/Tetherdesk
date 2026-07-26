@@ -7,6 +7,9 @@ dist/
 out/
 build/
 
+# Agent dist bundle (built output)
+dist-bundle/
+
 # Turborepo cache
 .turbo/
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useLang } from "../../lib/lang-context";
 
 const s: Record<string, React.CSSProperties> = {
   page: {
@@ -79,17 +80,8 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-const TOC_ITEMS = [
-  { id: "quickstart", label: "Quick Start (30 seconds)" },
-  { id: "installation", label: "Installation" },
-  { id: "access-keys", label: "Access Keys Explained" },
-  { id: "three-ways", label: "3 Ways to Connect" },
-  { id: "dashboard", label: "Using the Dashboard" },
-  { id: "pairing-flow", label: "How Pairing Works" },
-  { id: "troubleshooting", label: "Troubleshooting" },
-  { id: "cli-commands", label: "CLI Command Reference" },
-  { id: "faq", label: "FAQ" },
-];
+
+
 
 function Code({ children }: { children: string }) {
   return <span style={s.code}>{children}</span>;
@@ -127,7 +119,25 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
 }
 
 export default function DocsPage() {
+  const { tr } = useLang();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d = tr.docs as any;
   const [activeId, setActiveId] = useState<string>("quickstart");
+  const [tocItems, setTocItems] = useState<{ id: string; label: string }[]>([]);
+
+  useEffect(() => {
+    setTocItems([
+      { id: "quickstart", label: d.quickStart as string },
+      { id: "installation", label: d.installation as string },
+      { id: "access-keys", label: d.accessKeys as string },
+      { id: "three-ways", label: d.twoWays as string },
+      { id: "dashboard", label: d.usingDashboard as string },
+      { id: "pairing-flow", label: d.pairingFlow as string },
+      { id: "troubleshooting", label: d.troubleshooting as string },
+      { id: "cli-commands", label: d.cliCommands as string },
+      { id: "faq", label: d.faq as string },
+    ]);
+  }, [d]);
 
   // IntersectionObserver for active section tracking
   useEffect(() => {
@@ -141,12 +151,12 @@ export default function DocsPage() {
       },
       { rootMargin: "-80px 0px -60% 0px" }
     );
-    for (const { id } of TOC_ITEMS) {
+    for (const { id } of tocItems) {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
     }
     return () => observer.disconnect();
-  }, []);
+  }, [tocItems]);
 
   return (
     <div style={s.page}>
@@ -155,23 +165,21 @@ export default function DocsPage() {
         <div style={s.nav}>
           <NavLink href="/">Home</NavLink>
           <NavLink href="/access">Access</NavLink>
-          <NavLink href="/dashboard">Dashboard</NavLink>
+          <NavLink href="/dashboard">{d.dashboard}</NavLink>
         </div>
       </header>
 
       <div className="docs-hero" style={s.hero}>
-        <h1 style={s.h1}>Documentation</h1>
-        <p style={s.sub}>
-          Everything you need to know about TetherDesk — from first-time setup to advanced usage.
-        </p>
+        <h1 style={s.h1}>{d.heroTitle}</h1>
+        <p style={s.sub}>{d.heroSub}</p>
       </div>
 
       <div className="docs-wrap" style={s.container}>
 
         {/* Sticky Table of Contents Sidebar */}
         <div className="docs-sidebar" style={s.sidebar}>
-          <div style={s.sidebarTitle}>On this page</div>
-          {TOC_ITEMS.map((item) => (
+          <div style={s.sidebarTitle}>{d.onThisPage}</div>
+          {tocItems.map((item) => (
             <a
               key={item.id}
               href={`#${item.id}`}
@@ -192,344 +200,486 @@ export default function DocsPage() {
         <div style={s.main}>
           <div className="docs-wrap" style={s.wrap}>
           <section id="quickstart" style={s.section}>
-          <h2 style={s.h2}>Quick Start — 30 seconds</h2>
-          <div style={s.note}>
-            No account, no credit card, no port forwarding. Works on any laptop with Node.js 20+.
-          </div>
-          <div className="docs-grid" style={s.grid2}>
-            <div style={s.card}>
-              <div style={s.cardTitle}>Step 1: Start Agent</div>
-              <div style={s.cardDesc}>
-                Run <Code>npx tetherdesk</Code> on your laptop. The agent connects to the backend and a <Code>TD-XXXXXX</Code> key appears in the terminal.
-              </div>
-            </div>
-            <div style={s.card}>
-              <div style={s.cardTitle}>Step 2: Enter Key on Phone</div>
-              <div style={s.cardDesc}>
-                Open <Code>/access</Code> on your phone. Enter the <Code>TD-XXXXXX</Code> key shown in the terminal, or use a persistent <Code>sk-xxx</Code> API key from the dashboard.
-              </div>
-            </div>
-            <div style={s.card}>
-              <div style={s.cardTitle}>Step 3: Approve on Laptop</div>
-              <div style={s.cardDesc}>
-                Your laptop shows an approval prompt. Click <span style={{ color: "#4ade80", fontWeight: 600 }}>Allow</span> to confirm the connection from your phone.
-              </div>
-            </div>
-            <div style={s.card}>
-              <div style={s.cardTitle}>Step 4: Control</div>
-              <div style={s.cardDesc}>
-                Your laptop screen streams to your phone. Tap to click, swipe to scroll — full remote control is now active.
-              </div>
-            </div>
-          </div>
+          <h2 style={s.h2}>{d.quickStart}</h2>
+          <div style={s.note}>{d.note1}</div>
+
+          <p style={s.p}>{d.qsRun}</p>
+          <CodeBlock>{`npx tetherdesk`}</CodeBlock>
+
+          <p style={s.p}>{d.qsOutput}</p>
+          <CodeBlock>{`PS C:\\Users\\Legion> npx tetherdesk
+
+TetherDesk
+
+  Using saved backend: https://tetherdesk-five.vercel.app
+  Config saved to C:\\Users\\Legion\\.tetherdesk\\config.json
+
+[1/1] Starting TetherDesk agent…
+
+ TetherDesk is running!
+
+  Dashboard: https://tetherdesk-five.vercel.app/dashboard
+
+  Waiting for access key…
+  Press Ctrl+C to stop.
+
+Agent initialized with persistent identity keypair
+
+=== TetherDesk Pairing ===
+Scan this QR code with your phone:
+
+
+Session ID: XPbIlbgNQivsd3bC
+Pairing token expires in 90 seconds.
+
+ ▄▄▄▄▄▄▄  ▄  ▄  ▄  ▄▄▄▄ ▄▄▄▄ ▄▄  ▄  ▄  ▄▄  ▄ ▄▄▄ ▄▄▄   ▄▄▄ ▄▄▄ ▄▄▄▄▄▄▄
+ █ ▄▄▄ █ █▄▀▀█ ▄█▀█▄█▄  ▀▄▄  ▀ █▄█ █▀▀ ▀ ▀▄▀ ▄█ ▄▀██▀▄   ▄▄▄   █ ▄▄▄ █
+ █ ███ █ ▀▀█▄▄▀▀▄ ██▄▄▀▀  ▄▀  ▀▀▀█▄██▄▄ █▀▄██▀▀ █▀▄ ▀▀▄▄▀█▀▄ █ █ ███ █
+ █▄▄▄▄▄█ ▄ ▄ █▀█ █ █▀█ ▄▀█▀█ ▄▀▄ █ ▄ █ ▄▀█▀█ █ █▀█▀█▀▄ ▄ █▀█ ▄ █▄▄▄▄▄█
+ ▄     ▄ ██  ▄▀▄█ ▄▀▀▀█▄ █▄█▄█▄█▀█▄▄▄██▄▀ ▄██  ▄▄▄█ █ ▀▄▄  ▀▀█▄▄  ▄▄▄
+ ▀  ▀█▀▄█▀ ▄ ▀█▄▄▀ ▄▀▄▄ █  ███▄▄▄▀ ████▀▀█▄█ ▄█▀  ▀██▀▀██ ███▀▀█ █  █▀
+  █ ▀▄▄▄▀█ ▀█  ██▀ ▄▄ █▄██  ▄▄ ▄█ █ █▀ ▄ █ ▄██▄▀█▄█▀ ▄█▀ ██▀▀█▄  ▄▀██
+ ▄ ▀▄ █▄ █  █████ ▀ ▄  █▀█▀▀▀  █▄   ▄▄█ █▄█▀▀▄▀▄█▀▄▄▄█▀▀▄ █▀▀█▄▄▄█▄ ▄
+  █▄ █▄▄▀▀ █▄ █▄▀█▀▀▀▄██▀▀▄▀  ██▀██▀█▄▄▀▀  ▀█▀█ ▄█▀▄▀▀█ ▀▀▄▄▀▀▄█ ▀▀▀ ▀
+ ▀██ ▄█▄ ▀▄▄ █▄▀ █ █▄▀██▀█▀▄▀  ▄▀ ▄ ▀▄ ▄ ▀█▀▀ █ █▀█▄▄██▀█▄▄ ███▄▄▀▄▄ ▄
+ ▀▀█ █▀▄▀█  ██▄█▄▀▀▄██▀▄▄ ▀▀███▄█ ▀ ▀▀▀▄ ▄██▀▀█▀▄▄▀▄ ▀▀ ▄▀▄█  ▀  ▀▀█▀▀
+ ▄█▀█▀▄▄▀   ▀▄▄▀ ▄▄█▀▄  ▄▀▀▄▀███▄ ▄▄▄█▀█ ▄█▀ ▄█▀▄█▄█ ▀▀▄▀███▀▀████▀▄█
+ ▄▀█ ▄█▄█▀█  ▄▀  ▄█ █▄▄▀▄▀▄▀▀ ▄█▀ ▀  ▄▄▀███▀ █▄ ▀█   ▄▀█▀▄▀▀▄█▀▀▀▄█▀
+ ▀█▄ ▀█▄▄▀█▀ ▀▄█  ▀ ▄ ▀▄▄▄▀▄  █▄█ ▀ ▀▄▀▄█▄▀█▄▀█ █▄▀▄▀▀█▀ ▄▀ ██▀▄▄ ▄█▄▀
+ █▄▀▀█▄▄▄ ▄ █▄▄▄▀█▀▄█  █▀▄▀▀█▄▄██▀▀▀▀▀▀█▀▀  ▄█▀▄▀▄▀▄▀▀▀ ▄  ▀▄  ▄▄ ▀▀ ▀
+ ▄  █▄▀▄▀█▀▀██▄▀ ▀ ▀▄ ███  █▄▄  ▄▄█▄ ▄▀ ▄█▀█ ▀█  ███ ▄▀▀ ▄▀▄ ▀▀▄▄█ ▄▄█
+ ▀▀ ▄▄▄▄▄▄█ ▄▄▀▄▀██▄▄█▄▀ ▀▀ ▄ ▄ █▄█▄██▀▄ ▀▄▄▄▀ ▀█▄ ▄  ▄ █ █▄ █████▄▀▀
+   ▄ █ ▄ █▄ ▀▄▀██ ▀█ █▀ ▄▄ ▄█▄ █▀█ ▄ █▀▀███▀▄▀▀▀██▀█▄███ ██▀ █ ▄ █▄▄▄
+ ▀█▀ █▄▄▄█ ▀▀▀▀ ▀█▀▄▀█▀ ▄▀█▀▀█▀█ █▄▄▄█ ▄▀██▀███▀ ▀▀▄▀▄▄▀▀█▄▀ █▄▄▄█▀▀ ▄
+ █ █ █▀▄▀▄▀▀ █▀ █▀▀█▀█▀█▄  ▄▀ ▀▄▀     █  █▀█ ▀█▀▄ ▀▄▄█▀▀ ██▄▄█▄▀█  ▀▄▀
+ █ ▄   ▄█▀█▄██▄█▄ █▀█▄██▄█▄▀▀██▄▀▀  ▀▀██  ██▄▀ ▄▄▄ █  ▀▄▄▀ █▀▄ ▀▀▀▀▀
+ █▄▀▄█ ▄▀▀▄██▀▄█▄ ▀▄  ▄▀▄ ▄▄▀▄ ▀█▄ ▀ ██▄█▀▀█ ▄▄ ▀██▄▄ █▀▄ ▀▄██ █▀▄▀█▀▄
+  █▀ ▄█▄▀▄▄██ ▄ █▀█▀█▀▀ ▀█▀ █ ██▄▀▄ ▄█ ▄ ▀▀ █▀▄█▄▄ ▄ ▄▀▀█ ▀    █▀ ▀███
+ ▄▀ ▄█ ▄▄  ▄▄  ▄  ▄ ██▄█▄ ▄▀█▀▄█▄ █  ▀██ ▀▀▄ ▄▀█▀▀▄█ ▄█▀▀███▄▄▄ █▀█▀█▀
+ ▀  ▄▀█▄▄▀█▀▄ ██▄▀  ▀  ██▄▄▀▄▀ ▄▀▀█▄▀█▄▀ ▄█▀ ▄▄▄ █ ▄ ▄ ▄▀█ ▄▄▄▄█▄▀ ▀▄▀
+ ▄█▀▀█▄▄█ █ ███▄█▄█▄▀▄ ▄ ▄█▀▀▄   █▀ ▄▄█ ▀ ▀▀▀▄█▄▀ ▀  ▀████  ▀██▀▀  ▄█▀
+  ▀ ███▄ ▄▄  ▀▄  ▀▀▀ ███ ▀ ██ ██ █▀▀▀█▀▄▄ ▀▄▄ ▄█▄▄▀▄█ ▄█▄█▀▄▀   ▄▀▀█▄
+ ██▀▀▄ ▄▄▀ █ ▀█ ▀█▀ ▀█ ▀▀█  ▀ ▄██▄▄▀▀▀██▀▄▀▀ ▄█ ▀██ ████ ▀▄  ▄ ▄▀  ▄ ▄
+  ▀▀▀▄▄▄▀▄▀█▄  █ ██▀█  ▀ ▄▀ ▀█▄▄ █  ▀▀█ █ ███  ▄█▄█  ▀▄█▀▀ ▀▀▄▀▄█▄██▀▀
+ █▀█▀██▄▄  ▀██▄    ▀▄▀▀  █  ██▀█▀█▀▀█▀███▀▀▀ ▀█▀ ▄▀▀▄▀▄███▀▀▀▀  ▀▀ ▄▄▀
+ █  ▄▄ ▄██▀▀    ▄▀▀▀  █▀ █▄▀█▄ ███▄█▄█▀▀ █ ▄ █▄▀▀█▄ ▀▄██ ▄▄▀▄▄███▄▀▀ █
+ ▄▄▄▄▄▄▄ ▀▀▀█▀▄▄ ▄█▄█ █    ▀█  ▀▀█ ▄ █▀▄█▀▀▀█▄█ ▄▀█   ▀▀█ ▀  █ ▄ █▄▄█▀
+ █ ▄▄▄ █  ▀▀▀▀▄▄ ▀▀▀▄▀█▄█▀▀▀ ▄▄█▀█▄▄▄█▄    ▄▀▀  ██▄▀   ▀█▀▄ ▄█▄▄▄██▀█▄
+ █ ███ █  ▀ ▄▄▄ ▄██▀▀█ ▄▄█▄ █▄▄███▀ ▀▄▀▄█████▄█ █  ▄▀ ▀█ ▀█▄▀▄▄▄ ▄ ▄▄▄
+ █▄▄▄▄▄█ ▄▄ ▄▀ ▀█▄  ▄ ▄▄  █   ▀█▄▀▄▀██▀█ ▀█▀█ █ ▄▄▀ ▀   ▄▀█▄███▄█▀▄▀▄
+
+Open https://tetherdesk-five.vercel.app/dashboard on your laptop to approve the connection.
+
+WebSocket failed — falling back to long-poll signaling
+Signaling connected
+
+  ╔══════════════════════════════════╗
+  ║       YOUR ACCESS KEY            ║
+  ╠══════════════════════════════════╣
+  ║   TD-IU5RqiQh9ZAz0fuQafWV7Q      ║
+  ╚══════════════════════════════════╝
+
+  Steps:
+  1. Open dashboard: https://tetherdesk-five.vercel.app/dashboard
+  2. Enter key above in the "Access Key" field
+  3. Click Allow on this laptop when prompted
+  4. Your phone can now control this laptop
+
+  (Key expires in 90 seconds — a new one will appear automatically)`}</CodeBlock>
+
+          <p style={s.p}>{d.qsPhoneSteps}</p>
+          <ol style={s.ul}>
+            <li>
+              {(() => {
+                const parts = d.qsPhone1.split("{url}");
+                if (parts.length === 2) {
+                  return <>{parts[0]}<Code>https://tetherdesk-five.vercel.app/access</Code>{parts[1]}</>;
+                }
+                const parts2 = d.qsPhone1.split("{key}");
+                if (parts2.length === 2) {
+                  return <>{parts2[0]}<Code>TD-IU5RqiQh9ZAz0fuQafWV7Q</Code>{parts2[1]}</>;
+                }
+                return d.qsPhone1;
+              })()}
+            </li>
+            <li>{(() => { const p = d.qsPhone2.split("{key}"); return p.length === 2 ? <>{p[0]}<Code>TD-IU5RqiQh9ZAz0fuQafWV7Q</Code>{p[1]}</> : d.qsPhone2; })()}</li>
+            <li>{d.qsPhone3}</li>
+            <li>{d.qsPhone4}</li>
+          </ol>
         </section>
 
         {/* Installation */}
         <section id="installation" style={s.section}>
-          <h2 style={s.h2}>Installation</h2>
+          <h2 style={s.h2}>{d.installation}</h2>
 
-          <h3 style={s.h3}>Option A: Run with npx (no install)</h3>
-          <p style={s.p}>
-            The fastest way to try TetherDesk. No installation required — Node.js downloads and caches the package automatically.
-          </p>
+          <h3 style={s.h3}>{d.installOptA}</h3>
+          <p style={s.p}>{d.installOptADesc}</p>
           <CodeBlock>{`npx tetherdesk`}</CodeBlock>
 
-          <h3 style={s.h3}>Option B: Global install with npm</h3>
-          <p style={s.p}>
-            Install once, use forever. The CLI is a single self-contained bundle with all dependencies included.
-          </p>
+          <h3 style={s.h3}>{d.installOptB}</h3>
+          <p style={s.p}>{d.installOptBDesc}</p>
           <CodeBlock>{`npm install -g tetherdesk
 tetherdesk`}</CodeBlock>
 
-          <h3 style={s.h3}>Option C: Global install with pnpm</h3>
+          <h3 style={s.h3}>{d.installOptC}</h3>
           <CodeBlock>{`pnpm add -g tetherdesk
 tetherdesk`}</CodeBlock>
 
-          <h3 style={s.h3}>Requirements</h3>
+          <h3 style={s.h3}>{d.requirements}</h3>
           <ul style={s.ul}>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>Node.js</span> 20 or later</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>npm</span> 10+ or <span style={{ color: "#ccc", fontWeight: 600 }}>pnpm</span> 9+</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>Operating System</span>: Windows 10/11, macOS 12+, or Linux (x64, arm64)</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>Internet</span>: Laptop needs outbound HTTPS access (no open ports required)</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>Phone</span>: Any smartphone with a modern browser (Chrome, Safari, Edge)</li>
+            <li>{d.reqNode}</li>
+            <li>{d.reqNpm}</li>
+            <li>{d.reqOs}</li>
+            <li>{d.reqNet}</li>
+            <li>{d.reqPhone}</li>
           </ul>
 
-          <div style={s.note}>
-            TetherDesk uses Cloudflare Tunnel (Argo) to create an outbound-only secure connection. Your laptop does NOT need a public IP, port forwarding, or router configuration.
-          </div>
+          <div style={s.note}>{d.reqNote}</div>
         </section>
 
         {/* Access Keys */}
         <section id="access-keys" style={s.section}>
-          <h2 style={s.h2}>Access Keys Explained</h2>
-          <p style={s.p}>
-            TetherDesk uses two types of keys. Understanding the difference helps you choose the right one for your workflow.
-          </p>
+          <h2 style={s.h2}>{d.keysTitle}</h2>
+          <p style={s.p}>{d.keysSub}</p>
 
           <div className="docs-grid" style={s.grid2}>
             <div style={{ ...s.card, borderColor: "#166534" }}>
-              <div style={s.cardTitle}>One-Time Key (TD-XXXXXX)</div>
+              <div style={s.cardTitle}>{d.oneTimeTitle}</div>
               <div style={s.cardDesc}>
                 <ul style={{ paddingLeft: 16, marginTop: 6 }}>
-                  <li>Generated via <Code>tetherdesk pair</Code> or the dashboard QR</li>
-                  <li>Expires after 90 seconds</li>
-                  <li>Single-use — consumed after connect</li>
-                  <li>Enter on the access page as <Code>TD-</Code> + the pairing token</li>
-                  <li>Best for: first-time setup, guest access, demos</li>
+                  {d.oneTimeBullets.map((b: string, i: number) => {
+                    const hasCmd = b.includes("{cmd}");
+                    const hasPrefix = b.includes("{prefix}");
+                    if (!hasCmd && !hasPrefix) return <li key={i}>{b}</li>;
+                    if (hasCmd) {
+                      const p = b.split("{cmd}");
+                      return <li key={i}>{p[0]}<Code>tetherdesk pair</Code>{p[1]}</li>;
+                    }
+                    if (hasPrefix) {
+                      const p = b.split("{prefix}");
+                      return <li key={i}>{p[0]}<Code>TD-</Code>{p[1]}</li>;
+                    }
+                    return <li key={i}>{b}</li>;
+                  })}
                 </ul>
               </div>
             </div>
             <div style={{ ...s.card, borderColor: "#166534" }}>
-              <div style={s.cardTitle}>Persistent API Key (sk-xxx)</div>
+              <div style={s.cardTitle}>{d.apiKeyTitle}</div>
               <div style={s.cardDesc}>
                 <ul style={{ paddingLeft: 16, marginTop: 6 }}>
-                  <li>Generated from the <Link href="/dashboard" style={{ color: "#4ade80" }}>dashboard</Link></li>
-                  <li>Never expires — use until revoked</li>
-                  <li>Can be reused across browser sessions</li>
-                  <li>Stored in your browser via "Remember this key"</li>
-                  <li>Best for: daily use, multiple devices, automation</li>
+                  {d.apiKeyBullets.map((b: string, i: number) =>
+                    b.includes("dashboard") ? (
+                      <li key={i}>
+                        {(() => {
+                          const parts = b.split("{dashboard}");
+                          return <>{parts[0]}<Link href="/dashboard" style={{ color: "#4ade80" }}>{d.dashboard}</Link>{parts[1]}</>;
+                        })()}
+                      </li>
+                    ) : (
+                      <li key={i}>{b}</li>
+                    )
+                  )}
                 </ul>
               </div>
             </div>
           </div>
 
           <div style={s.warning}>
-            Keep your API key secret. Anyone with your <Code>sk-xxx</Code> key can control your laptop. Revoke unused keys from the dashboard.
+            {(() => {
+              const p = d.keysWarning.split("{key}");
+              return p.length === 2 ? <>{p[0]}<Code>sk-xxx</Code>{p[1]}</> : d.keysWarning;
+            })()}
           </div>
         </section>
 
-        {/* 3 Ways to Connect */}
+        {/* 2 Ways to Connect */}
         <section id="three-ways" style={s.section}>
-          <h2 style={s.h2}>2 Ways to Connect</h2>
-          <p style={s.p}>
-            TetherDesk offers two methods to connect your phone to your laptop. Both are equally secure.
-          </p>
+          <h2 style={s.h2}>{d.twoWaysTitle}</h2>
+          <p style={s.p}>{d.twoWaysSub}</p>
 
-          <h3 style={s.h3}>Method 1: One-Time Key (TD-XXXXXX) — Recommended</h3>
-          <p style={s.p}>
-            The simplest method. Run <Code>npx tetherdesk</Code> on your laptop — a <Code>TD-XXXXXX</Code> key appears in the terminal automatically. Enter it on the access page from your phone.
-          </p>
-          <h4 style={s.h4}>Steps:</h4>
+          <h3 style={s.h3}>{d.method1Title}</h3>
+          <h4 style={s.h4}>{d.method1Steps}</h4>
           <ol style={s.ul}>
-            <li>Run <Code>npx tetherdesk</Code> on your laptop</li>
-            <li>Wait for the <Code>TD-XXXXXX</Code> key to appear in the terminal</li>
-            <li>Open <Code>/access</Code> on your phone</li>
-            <li>Enter the <Code>TD-XXXXXX</Code> key and click Connect</li>
-            <li>Click <span style={{ color: "#4ade80", fontWeight: 600 }}>Allow</span> on your laptop when the approval prompt appears</li>
-            <li>Your phone now controls your laptop</li>
+            <li>{(() => { const p = d.m1s1.split("{cmd}"); return <>{p[0]}<Code>npx tetherdesk</Code>{p[1]}</>; })()}</li>
+            <li>{(() => { const p = d.m1s2.split("{key}"); return <>{p[0]}<Code>TD-XXXXXX</Code>{p[1]}</>; })()}</li>
+            <li>{(() => { const p = d.m1s3.split("{url}"); return <>{p[0]}<Code>/access</Code>{p[1]}</>; })()}</li>
+            <li>{(() => { const p = d.m1s4.split("{key}"); return <>{p[0]}<Code>TD-XXXXXX</Code>{p[1]}</>; })()}</li>
+            <li>{(() => { const p = d.m1s5.split("{allow}"); return <>{p[0]}<span style={{ color: "#4ade80", fontWeight: 600 }}>Allow</span>{p[1]}</>; })()}</li>
+            <li>{d.m1s6}</li>
           </ol>
-          <div style={s.note}>
-            The key expires after 90 seconds. A new one appears automatically — no need to restart the agent.
-          </div>
+          <div style={s.note}>{d.m1Note}</div>
 
-          <h3 style={s.h3}>Method 2: Persistent API Key (sk-xxx)</h3>
-          <p style={s.p}>
-            Best for daily use. Generate a persistent key from the dashboard and reuse it across sessions. The key never expires and does not require laptop-side approval on each use.
-          </p>
+          <h3 style={s.h3}>{d.method2Title}</h3>
+          <p style={s.p}>{d.method2Desc}</p>
           <ol style={s.ul}>
-            <li>Open <Link href="/dashboard" style={{ color: "#4ade80" }}>the dashboard</Link> on your laptop</li>
-            <li>Click <span style={{ color: "#ccc", fontWeight: 600 }}>Generate Key</span></li>
-            <li>Copy the <Code>sk-xxx</Code> key — shown only once</li>
-            <li>Open <Code>/access</Code> on your phone</li>
-            <li>Paste the key and check <span style={{ color: "#ccc", fontWeight: 600 }}>Remember this key</span></li>
-            <li>Click Connect — you go directly to the control page</li>
+            <li>{(() => { const p = d.m2s1.split("{dashboard}"); return <>{p[0]}<Link href="/dashboard" style={{ color: "#4ade80" }}>{d.dashboard}</Link>{p[1]}</>; })()}</li>
+            <li>{(() => { const p = d.m2s2.split("{btn}"); return <>{p[0]}<span style={{ color: "#ccc", fontWeight: 600 }}>Generate Key</span>{p[1]}</>; })()}</li>
+            <li>{(() => { const p = d.m2s3.split("{key}"); return <>{p[0]}<Code>sk-xxx</Code>{p[1]}</>; })()}</li>
+            <li>{(() => { const p = d.m2s4.split("{url}"); return <>{p[0]}<Code>/access</Code>{p[1]}</>; })()}</li>
+            <li>{(() => { const p = d.m2s5.split("{remember}"); return <>{p[0]}<span style={{ color: "#ccc", fontWeight: 600 }}>Remember this key</span>{p[1]}</>; })()}</li>
+            <li>{d.m2s6}</li>
           </ol>
           <div style={s.warning}>
-            Keep your API key secret. Anyone with your <Code>sk-xxx</Code> key can access your laptop. Revoke unused keys from the dashboard.
+            {(() => { const p = d.keysWarning.split("{key}"); return p.length === 2 ? <>{p[0]}<Code>sk-xxx</Code>{p[1]}</> : d.keysWarning; })()}
           </div>
         </section>
 
         {/* Dashboard */}
         <section id="dashboard" style={s.section}>
-          <h2 style={s.h2}>Using the Dashboard</h2>
+          <h2 style={s.h2}>{d.dashTitle}</h2>
           <p style={s.p}>
-            The <Link href="/dashboard" style={{ color: "#4ade80" }}>dashboard</Link> is your laptop-side control center. It shows:
+            {(() => { const p = d.dashSub.split("{dashboard}"); return <>{p[0]}<Link href="/dashboard" style={{ color: "#4ade80" }}>{d.dashboard}</Link>{p[1]}</>; })()}
           </p>
           <ul style={s.ul}>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>QR Code</span> — refreshed every 90 seconds. Scan with your phone to pair.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>Approval Modal</span> — pops up when a phone tries to connect. Click Allow or Deny.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>Activity Log</span> — real-time stream of pairing and WebRTC events via SSE.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>API Key Management</span> — generate and copy persistent API keys for repeat access.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>Agent Status</span> — shows whether the local agent is running and connected.</li>
+            {d.dashBullets.map((b: string, i: number) => {
+              const colonIdx = b.indexOf("—");
+              if (colonIdx === -1) return <li key={i}>{b}</li>;
+              const label = b.slice(0, colonIdx).trim();
+              const desc = b.slice(colonIdx + 1).trim();
+              return <li key={i}><span style={{ color: "#ccc", fontWeight: 600 }}>{label}</span> — {desc}</li>;
+            })}
           </ul>
-          <p style={s.p}>
-            The dashboard can generate QR codes and one-time keys even without the local agent running. For a full pairing experience, run <Code>tetherdesk start</Code> alongside the dashboard.
-          </p>
+          <p style={s.p}>{d.dashNote}</p>
         </section>
 
         {/* Pairing Flow */}
         <section id="pairing-flow" style={s.section}>
-          <h2 style={s.h2}>How Pairing Works</h2>
-          <p style={s.p}>
-            TetherDesk uses a secure cryptographic handshake based on X25519 ECDH (Elliptic Curve Diffie-Hellman) and HKDF key derivation. Here is the full flow:
-          </p>
+          <h2 style={s.h2}>{d.pairTitle}</h2>
+          <p style={s.p}>{d.pairSub}</p>
           <ol style={s.ul}>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>{"Laptop generates ephemeral keypair"}</span> — a one-time X25519 key used only for this pairing session.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>{"Pairing request"}</span> — laptop sends its ephemeral public key to the server (Redis), which stores it in a hash with a 90-second TTL.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>{"QR / Key encodes the payload"}</span> — the payload contains the backend origin, pairing token, session ID, and laptop's ephemeral public key.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>{"Phone reads the payload"}</span> — via camera (QR decode) or URL parameter (access key).</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>{"Phone generates its own ephemeral keypair"}</span> — also X25519, also one-time.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>{"ECDH shared secret"}</span> — phone computes the shared secret using its ephemeral secret key and the laptop's ephemeral public key.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>{"HKDF session key"}</span> — the shared secret is fed into HKDF with the session ID as salt, producing a 256-bit AES-GCM key.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>{"Confirmation"}</span> — phone sends its ephemeral public key and device fingerprint to the server. Laptop polls for this message.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>{"Approval"}</span> — laptop shows an approval prompt. If allowed, WebRTC signaling begins over the encrypted channel.</li>
-            <li><span style={{ color: "#ccc", fontWeight: 600 }}>{"WebRTC connection"}</span> — STUN/TURN via Cloudflare, media and data encrypted with DTLS-SRTP. No server can decrypt the stream.</li>
+            {d.pairSteps.map((step: string, i: number) => {
+              const colonIdx = step.indexOf("—");
+              if (colonIdx === -1) return <li key={i}>{step}</li>;
+              const label = step.slice(0, colonIdx).trim();
+              const desc = step.slice(colonIdx + 1).trim();
+              return <li key={i}><span style={{ color: "#ccc", fontWeight: 600 }}>{label}</span> — {desc}</li>;
+            })}
           </ol>
-          <div style={s.note}>
-            The session key (<Code>sessionKey</Code>) is derived independently on both sides using ECDH + HKDF and is <span style={{ color: "#ccc", fontWeight: 600 }}>never transmitted</span> over the network. The server only relays ephemeral public keys and ICE candidates.
-          </div>
+          <div style={s.note}>{d.pairNote}</div>
         </section>
 
         {/* Troubleshooting */}
         <section id="troubleshooting" style={s.section}>
-          <h2 style={s.h2}>Troubleshooting</h2>
+          <h2 style={s.h2}>{d.troubTitle}</h2>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>"Access key expired"</div>
+            <div style={s.cardTitle}>{d.troubKeyExpired}</div>
             <div style={s.cardDesc}>
-              One-time keys expire after 90 seconds. A new <Code>TD-XXXXXX</Code> key appears automatically in the terminal — no need to restart the agent. Or use a persistent <Code>sk-xxx</Code> API key instead.
+              {(() => { const p = d.troubKeyExpiredDesc.split("{key}"); return <>{p[0]}<Code>TD-XXXXXX</Code>{p[1]}</>; })()}
             </div>
           </div>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>"Invalid API key"</div>
+            <div style={s.cardTitle}>{d.troubInvalidKey}</div>
             <div style={s.cardDesc}>
-              Make sure the key starts with <Code>sk-</Code> followed by exactly 32 hexadecimal characters (0-9, a-f). Verify the key was generated from the dashboard and has not been revoked. Generate a new key if needed.
+              {(() => { const p = d.troubInvalidKeyDesc.split("{prefix}"); return <>{p[0]}<Code>sk-</Code>{p[1]}</>; })()}
             </div>
           </div>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>TD-XXXXXX key does not appear in terminal</div>
+            <div style={s.cardTitle}>{d.troubNoKey}</div>
             <div style={s.cardDesc}>
-              The agent polls the backend every 2 seconds for up to 60 seconds. If the key does not appear, check that <Code>AGENT_SECRET</Code> in your Vercel environment matches the value in <Code>~/.tetherdesk/config.json</Code>. Redeploy Vercel after updating environment variables.
+              {(() => {
+                const t = d.troubNoKeyDesc;
+                const parts = t.split("{secret}").flatMap((x: string) => x.split("{config}"));
+                return <>{parts[0]}<Code>AGENT_SECRET</Code>{parts[1]}<Code>~/.tetherdesk/config.json</Code>{parts[2]}</>;
+              })()}
             </div>
           </div>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>Agent not showing in dashboard</div>
+            <div style={s.cardTitle}>{d.troubNoAgent}</div>
             <div style={s.cardDesc}>
-              Run <Code>npx tetherdesk</Code> and wait for "Signaling connected". If the agent cannot connect, check your internet connection and that the backend URL in <Code>~/.tetherdesk/config.json</Code> is correct.
+              {(() => {
+                const p = d.troubNoAgentDesc.split("{cmd}").flatMap((x: string) => x.split("{config}"));
+                return <>{p[0]}<Code>npx tetherdesk</Code>{p[1]}<Code>~/.tetherdesk/config.json</Code>{p[2]}</>;
+              })()}
             </div>
           </div>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>Connection drops or lags</div>
+            <div style={s.cardTitle}>{d.troubDrops}</div>
+            <div style={s.cardDesc}>{d.troubDropsDesc}</div>
+          </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.troubNotFound}</div>
             <div style={s.cardDesc}>
-              TetherDesk uses WebRTC with Cloudflare TURN relay. If the direct peer-to-peer connection fails, it falls back to the relay, which may add latency. Ensure both devices have a stable internet connection. For best performance, connect both devices to the same WiFi network.
+              {(() => {
+                const p = d.troubNotFoundDesc.split("{cmd}").flatMap((x: string) => x.split("{install}"));
+                return <>{p[0]}<Code>npx tetherdesk</Code>{p[1]}<Code>npm install -g tetherdesk</Code>{p[2]}</>;
+              })()}
             </div>
           </div>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>"Cannot find package tetherdesk"</div>
+            <div style={s.cardTitle}>{d.troubNoVideo}</div>
             <div style={s.cardDesc}>
-              Run <Code>npx tetherdesk</Code> — the <Code>npx</Code> command downloads the package automatically. If you want a global install, run <Code>npm install -g tetherdesk</Code> first, then just run <Code>tetherdesk</Code>.
+              {(() => {
+                const p = d.troubNoVideoDesc.split("{pkg}").flatMap((x: string) => x.split("{cmd}"));
+                return <>{p[0]}<Code>@roamhq/wrtc</Code>{p[1]}<Code>npm install -g @roamhq/wrtc</Code>{p[2]}</>;
+              })()}
             </div>
           </div>
         </section>
 
         {/* CLI Commands */}
         <section id="cli-commands" style={s.section}>
-          <h2 style={s.h2}>CLI Command Reference</h2>
+          <h2 style={s.h2}>{d.cliTitle}</h2>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>tetherdesk (default)</div>
+            <div style={s.cardTitle}>{d.cliDefaultTitle}</div>
             <div style={s.cardDesc}>
-              Start the agent and connect to the backend. A <Code>TD-XXXXXX</Code> key appears in the terminal automatically. This is the primary command for laptop-side operation.
+              {(() => { const p = d.cliDefaultDesc.split("{key}"); return <>{p[0]}<Code>TD-XXXXXX</Code>{p[1]}</>; })()}
             </div>
             <CodeBlock>{`npx tetherdesk
 
-  TetherDesk agent starting...
-  Signaling connected  ✓
+TetherDesk
 
-  Access key (expires in 90s):
-  TD-A3F7K2
+  Using saved backend: https://tetherdesk-five.vercel.app
+  Config saved to C:\\Users\\Legion\\.tetherdesk\\config.json
+
+[1/1] Starting TetherDesk agent…
+
+ TetherDesk is running!
+
+  Dashboard: https://tetherdesk-five.vercel.app/dashboard
+
+  Waiting for access key…
+  Press Ctrl+C to stop.
+
+Agent initialized with persistent identity keypair
+
+=== TetherDesk Pairing ===
+Scan this QR code with your phone:
+
+
+Session ID: XPbIlbgNQivsd3bC
+Pairing token expires in 90 seconds.
+
+▄▄▄▄▄▄▄  ▄  ▄  ▄  ▄▄▄▄ ▄▄▄▄ ▄▄  ▄  ▄  ▄▄  ▄ ▄▄▄ ▄▄▄   ▄▄▄ ▄▄▄ ▄▄▄▄▄▄▄
+█ ▄▄▄ █ █▄▀▀█ ▄█▀█▄█▄  ▀▄▄  ▀ █▄█ █▀▀ ▀ ▀▄▀ ▄█ ▄▀██▀▄   ▄▄▄   █ ▄▄▄ █
+█ ███ █ ▀▀█▄▄▀▀▄ ██▄▄▀▀  ▄▀  ▀▀▀█▄██▄▄ █▀▄██▀▀ █▀▄ ▀▀▄▄▀█▀▄ █ █ ███ █
+... (QR code renders in terminal)
+▄▄▄▄▄▄▄ ▀▀▀█▀▄▄ ▄█▄█ █    ▀█  ▀▀█ ▄ █▀▄█▀▀▀█▄█ ▄▀█   ▀▀█ ▀  █ ▄ █▄▄█▀
+█ ▄▄▄ █  ▀▀▀▀▄▄ ▀▀▀▄▀█▄█▀▀▀ ▄▄█▀█▄▄▄█▄    ▄▀▀  ██▄▀   ▀█▀▄ ▄█▄▄▄██▀█▄
+█ ███ █  ▀ ▄▄▄ ▄██▀▀█ ▄▄█▄ █▄▄███▀ ▀▄▀▄█████▄█ █  ▄▀ ▀█ ▀█▄▀▄▄▄ ▄ ▄▄▄
+█▄▄▄▄▄█ ▄▄ ▄▀ ▀█▄  ▄ ▄▄  █   ▀█▄▀▄▀██▀█ ▀█▀█ █ ▄▄▀ ▀   ▄▀█▄███▄█▀▄▀▄
+
+Open https://tetherdesk-five.vercel.app/dashboard on your laptop to approve the connection.
+
+WebSocket failed — falling back to long-poll signaling
+Signaling connected
+
+  ╔══════════════════════════════════╗
+  ║       YOUR ACCESS KEY            ║
+  ╠══════════════════════════════════╣
+  ║   TD-IU5RqiQh9ZAz0fuQafWV7Q      ║
+  ╚══════════════════════════════════╝
 
   Steps:
-  1. Open:  https://tetherdesk-five.vercel.app/access
+  1. Open dashboard: https://tetherdesk-five.vercel.app/dashboard
   2. Enter key above in the "Access Key" field
   3. Click Allow on this laptop when prompted
+  4. Your phone can now control this laptop
 
   (Key expires in 90 seconds — a new one will appear automatically)`}</CodeBlock>
           </div>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>tetherdesk config [key] [value]</div>
+            <div style={s.cardTitle}>{d.cliConfigTitle}</div>
             <div style={s.cardDesc}>
-              Get or set configuration values stored in <Code>~/.tetherdesk/config.json</Code>. Without arguments, shows all config. With a key, shows the value. With key and value, sets the config.
+              {(() => { const p = d.cliConfigDesc.split("{path}"); return <>{p[0]}<Code>~/.tetherdesk/config.json</Code>{p[1]}</>; })()}
             </div>
-            <CodeBlock>{`tetherdesk config                         # show all config
-tetherdesk config backendOrigin           # get backend URL
-tetherdesk config backendOrigin https://example.com  # set backend URL`}</CodeBlock>
+            <CodeBlock>{d.cliConfigExample.join("\n")}</CodeBlock>
+          </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.cliPairTitle}</div>
+            <div style={s.cardDesc}>
+              {(() => { const p = d.cliPairDesc.split("{key}"); return <>{p[0]}<Code>TD-XXXXXX</Code>{p[1]}</>; })()}
+            </div>
+          </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.cliStatusTitle}</div>
+            <div style={s.cardDesc}>{d.cliStatusDesc}</div>
+          </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.cliStopTitle}</div>
+            <div style={s.cardDesc}>{d.cliStopDesc}</div>
+          </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.cliLogsTitle}</div>
+            <div style={s.cardDesc}>
+              {(() => { const p = d.cliLogsDesc.split("{cmd}"); return <>{p[0]}<Code>tail -f</Code>{p[1]}</>; })()}
+            </div>
           </div>
         </section>
 
         {/* FAQ */}
         <section id="faq" style={s.section}>
-          <h2 style={s.h2}>FAQ</h2>
+          <h2 style={s.h2}>{d.faqTitle}</h2>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>Is my data encrypted?</div>
+            <div style={s.cardTitle}>{d.faqEncryptQ}</div>
+            <div style={s.cardDesc}>{d.faqEncryptA}</div>
+          </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.faqAccountQ}</div>
+            <div style={s.cardDesc}>{d.faqAccountA}</div>
+          </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.faqPortsQ}</div>
+            <div style={s.cardDesc}>{d.faqPortsA}</div>
+          </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.faqMobileQ}</div>
+            <div style={s.cardDesc}>{d.faqMobileA}</div>
+          </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.faqNoCameraQ}</div>
             <div style={s.cardDesc}>
-              Yes. All traffic is end-to-end encrypted. The pairing handshake uses X25519 ECDH + HKDF for key agreement, and the WebRTC data/media channels use DTLS-SRTP (AES-GCM 256). The Cloudflare tunnel provides transport-layer encryption. TetherDesk servers never have access to your session keys or data.
+              {(() => {
+                const p = d.faqNoCameraA.split("{key}").flatMap((x: string) => x.split("{apikey}"));
+                return <>{p[0]}<Code>TD-XXXXXX</Code>{p[1]}<Code>sk-xxx</Code>{p[2]}</>;
+              })()}
             </div>
           </div>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>Do I need a TetherDesk account?</div>
+            <div style={s.cardTitle}>{d.faqAppQ}</div>
+            <div style={s.cardDesc}>{d.faqAppA}</div>
+          </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.faqMultiQ}</div>
             <div style={s.cardDesc}>
-              No. TetherDesk does not require any account, registration, or personal information. The backend uses Redis for ephemeral state, and no data is permanently stored.
+              {(() => { const p = d.faqMultiA.split("{cmd}"); return <>{p[0]}<Code>tetherdesk pair</Code>{p[1]}</>; })()}
             </div>
           </div>
 
           <div style={s.card}>
-            <div style={s.cardTitle}>Do I need to open ports on my router?</div>
+            <div style={s.cardTitle}>{d.faqOsQ}</div>
             <div style={s.cardDesc}>
-              No. TetherDesk uses Cloudflare Tunnel, which creates an outbound-only connection from your laptop. No inbound ports are required. This works behind NAT, corporate firewalls, and CGNAT.
-            </div>
-          </div>
-
-          <div style={s.card}>
-            <div style={s.cardTitle}>Does it work on iPhone and Android?</div>
-            <div style={s.cardDesc}>
-              Yes. The phone connects through a browser-based PWA (Progressive Web App). It works on Safari (iOS), Chrome (Android), and any modern mobile browser. Camera QR scanning is supported on both platforms.
-            </div>
-          </div>
-
-          <div style={s.card}>
-            <div style={s.cardTitle}>Can I use it without a phone camera?</div>
-            <div style={s.cardDesc}>
-              Yes. Instead of scanning the QR code, you can enter the one-time key (<Code>TD-XXXXXX</Code>) shown in the terminal, or use a persistent API key (<Code>sk-xxx</Code>) generated from the dashboard.
-            </div>
-          </div>
-
-          <div style={s.card}>
-            <div style={s.cardTitle}>Is there a mobile app?</div>
-            <div style={s.cardDesc}>
-              TetherDesk uses a PWA (Progressive Web App). On Android, Chrome will prompt you to "Add to Home Screen" for an app-like experience. On iOS, use Safari's Share menu → "Add to Home Screen". The PWA supports offline mode and camera access.
-            </div>
-          </div>
-
-          <div style={s.card}>
-            <div style={s.cardTitle}>Can multiple phones connect to one laptop?</div>
-            <div style={s.cardDesc}>
-              Each pairing session supports one phone at a time. To connect a different phone, generate a new pairing session by running <Code>tetherdesk pair</Code> or waiting for the QR code to refresh on the dashboard.
-            </div>
-          </div>
-
-          <div style={s.card}>
-            <div style={s.cardTitle}>Is TetherDesk open source?</div>
-            <div style={s.cardDesc}>
-              Yes. The full source code is available on <a href="https://github.com/wi5nuu/Tetherdesk" style={{ color: "#4ade80" }} target="_blank" rel="noopener noreferrer">GitHub</a> under the MIT license. Contributions, issues, and feature requests are welcome.
+              {d.faqOsA} <a href="https://github.com/wi5nuu/Tetherdesk" style={{ color: "#4ade80" }} target="_blank" rel="noopener noreferrer">GitHub</a>.
             </div>
           </div>
         </section>
 
         <div style={s.footer}>
-          <p>TetherDesk — Open source remote terminal access</p>
+          <p>TetherDesk — {d.docs}</p>
           <div style={{ marginTop: 8, display: "flex", justifyContent: "center", gap: 20 }}>
-            <Link href="/" className="link-landing" style={{ color: "#555", textDecoration: "none" }}>Home</Link>
+            <Link href="/" className="link-landing" style={{ color: "#555", textDecoration: "none" }}>{d.home}</Link>
             <Link href="/access" className="link-landing" style={{ color: "#555", textDecoration: "none" }}>Access</Link>
-            <Link href="/dashboard" className="link-landing" style={{ color: "#555", textDecoration: "none" }}>Dashboard</Link>
+            <Link href="/dashboard" className="link-landing" style={{ color: "#555", textDecoration: "none" }}>{d.dashboard}</Link>
             <a href="https://github.com/wi5nuu/Tetherdesk" className="link-landing" style={{ color: "#555", textDecoration: "none" }} target="_blank" rel="noopener noreferrer">GitHub</a>
           </div>
         </div>

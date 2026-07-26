@@ -105,6 +105,7 @@ export default function ControlPage() {
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
   const [heldModifiers, setHeldModifiers] = useState<Set<string>>(new Set());
+  const [videoReceived, setVideoReceived] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
@@ -453,8 +454,12 @@ export default function ControlPage() {
     pc.ontrack = (evt) => {
       if (videoRef.current && evt.streams[0]) {
         videoRef.current.srcObject = evt.streams[0];
+        setVideoReceived(true);
       }
     };
+
+    // Reset video flag on new connection
+    setVideoReceived(false);
 
     // Data channel — application-layer AES-256-GCM encrypted (Section 10.2 step 7)
     pc.ondatachannel = (evt) => {
@@ -533,6 +538,23 @@ export default function ControlPage() {
     };
   }, []);
 
+  // Show a hint if connected but no video frames arrive within 8 seconds
+  const videoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (connState === "connected" && !videoReceived) {
+      videoTimeoutRef.current = setTimeout(() => {
+        // If still no video after timeout, videoReceived stays false — render shows hint
+      }, 8_000);
+    }
+    if (videoReceived && videoTimeoutRef.current) {
+      clearTimeout(videoTimeoutRef.current);
+      videoTimeoutRef.current = null;
+    }
+    return () => {
+      if (videoTimeoutRef.current) clearTimeout(videoTimeoutRef.current);
+    };
+  }, [connState, videoReceived]);
+
   // -------------------------------------------------------------------------
   // Input event forwarding (Section 8 / Section 12.5)
   // -------------------------------------------------------------------------
@@ -605,10 +627,6 @@ export default function ControlPage() {
     },
     [sendEncryptedInput],
   );
-
-  const sendKeyEvent = useCallback((code: string, down: boolean) => {
-    void sendEncryptedInput({ t: "key", code, down, ts: Date.now() });
-  }, [sendEncryptedInput]);
 
   const toggleModifier = useCallback((code: string) => {
     const isHeld = heldModifiers.has(code);
@@ -751,6 +769,16 @@ export default function ControlPage() {
       {connState === "reconnecting" && (
         <div style={styles.overlay} role="status" aria-live="polite">
           <p style={styles.overlayText}>Reconnecting…</p>
+        </div>
+      )}
+
+      {/* No video hint — data channel works but video not received */}
+      {connState === "connected" && !videoReceived && (
+        <div style={styles.videoHint}>
+          <span style={{ fontSize: 13, color: "#fbbf24" }}>&#9888;</span>
+          <span style={styles.videoHintText}>
+            Connected but not receiving video — check that the laptop agent has WebRTC support installed.
+          </span>
         </div>
       )}
 
@@ -1054,5 +1082,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     cursor: "pointer",
     minHeight: 36,
+  },
+  videoHint: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "6px 12px",
+    background: "#1a0f00",
+    flexShrink: 0,
+  },
+  videoHintText: {
+    fontSize: 11,
+    color: "#d97706",
+    lineHeight: 1.4,
   },
 };
