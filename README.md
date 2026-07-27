@@ -15,17 +15,100 @@ npx tetherdesk
 ```
 
 This single command:
-1. Starts the local agent on your laptop
-2. Shows an **access key** (`TD-XXXXXX`) in a box
-3. Creates a pairing session with 90-second expiry
+1. Checks screen capture permission (macOS will prompt on first run)
+2. Starts the local agent on your laptop
+3. Shows an **access key** (`TD-XXXXXX`) in a box
+4. Creates a pairing session with **60-second expiry**
 
 **On your phone:**
 - Open `https://tetherdesk-five.vercel.app/access` and enter the `TD-XXXXXX` key, **or**
 - Scan the QR code from the terminal (if terminal supports it)
 
-When prompted on your laptop, click **Allow**. Your phone now displays your laptop screen with a full control toolbar — zoom, keyboard input, modifier keys (Ctrl/Alt/Win), and special keys (Esc/Tab/Enter).
+Your phone **automatically connects** and displays your laptop screen with a full control toolbar — zoom, keyboard input, modifier keys (Ctrl/Alt/Win), and special keys (Esc/Tab/Enter). No manual approval needed.
 
-## How It Actually Works
+**First-time setup (macOS only):**
+- macOS will prompt "Terminal wants to record your screen" — click **Allow**
+- If denied, agent will exit with clear instructions to grant permission
+- Windows users: no permission prompt required
+
+## Troubleshooting
+
+### Phone Shows Blank Screen (Black Screen with Control Buttons)
+
+**Symptoms:** After scanning QR code, phone displays control buttons (Ctrl, Alt, etc.) but the laptop screen is completely black.
+
+**Root Cause:** Laptop agent failed to capture screen or send video stream. This happens when:
+1. Screen capture permission was **denied** (macOS only)
+2. `@roamhq/wrtc` package failed to install
+3. Screen capture module encountered an error
+
+**Solution:**
+
+**macOS:**
+```bash
+# 1. Check terminal output for permission error:
+❌ Screen capture permission DENIED or unavailable.
+
+# 2. Grant screen recording permission:
+#    System Settings → Privacy & Security → Screen Recording
+#    → Enable permission for "Terminal" or "Node"
+
+# 3. Restart agent:
+npx tetherdesk
+
+# 4. Look for success message:
+✅ Screen capture permission granted.
+```
+
+**Windows:**
+```bash
+# Windows usually doesn't require permission prompt
+# If you see blank screen, check terminal output for errors:
+
+# Common issues:
+# - @roamhq/wrtc not installed → reinstall:
+npm install -g @roamhq/wrtc
+
+# - PowerShell execution policy → run as Administrator:
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Verification:**
+When agent runs successfully, you should see these log messages:
+```
+[TetherDesk] Checking screen capture permission...
+✅ Screen capture permission granted.
+[TetherDesk] Screen resolution: 1920x1080
+[TetherDesk] Phone connected — remote control is now active
+```
+
+**Still Not Working?**
+- Check if `@roamhq/wrtc` is installed: `npm list -g @roamhq/wrtc`
+- Try reinstalling TetherDesk: `npm install -g tetherdesk`
+- Check terminal logs for error messages starting with `[TetherDesk]`
+
+### QR Code Expires Too Fast
+
+QR codes are valid for **60 seconds** (reduced from 90s for improved security). If you can't scan in time:
+- Keep your phone camera ready before generating the QR
+- Use the access key method instead (slower but no time pressure)
+- The QR auto-refreshes after expiry — just wait for the new one
+
+### Connection Fails (WebRTC)
+
+If pairing succeeds but connection drops immediately:
+- **Behind corporate firewall?** WebRTC may be blocked. Try from home network or enable TURN relay (see Advanced Configuration)
+- **Strict NAT?** Enable TURN relay in config for NAT traversal
+- Check firewall allows UDP traffic for WebRTC
+
+### Input Not Working (Keyboard/Mouse)
+
+If video stream works but controls don't respond:
+- **macOS:** Grant Accessibility permission to Terminal (System Settings → Privacy & Security → Accessibility)
+- **Windows:** Run agent as Administrator if input injection fails
+- **Linux:** Install `xdotool` for X11 or ensure Wayland compatibility
+
+
 
 ### Architecture Overview
 
@@ -66,23 +149,27 @@ When prompted on your laptop, click **Allow**. Your phone now displays your lapt
 ### Security Model
 
 **Pairing Flow:**
-1. Laptop generates ephemeral X25519 keypair (one-time use)
-2. Laptop sends public key + pairing token to Redis (90-second TTL)
-3. QR code encodes: `{backendOrigin, pairingToken, sessionId, laptopEphemeralPubKey}`
-4. Phone scans QR, extracts payload
-5. Phone generates its own ephemeral X25519 keypair
-6. Phone computes shared secret via ECDH: `ECDH(phoneSK, laptopPK)`
-7. Shared secret → HKDF with sessionId as salt → 256-bit AES-GCM key
-8. Phone sends its public key to Redis
-9. Laptop polls Redis, retrieves phone's public key
-10. Laptop computes same shared secret: `ECDH(laptopSK, phonePK)`
-11. Both sides now have identical session key, **never transmitted over network**
+1. Laptop checks screen capture permission (fail fast if denied)
+2. Laptop generates ephemeral X25519 keypair (one-time use)
+3. Laptop sends public key + pairing token to Redis (**60-second TTL**)
+4. QR code encodes: `{backendOrigin, pairingToken, sessionId, laptopEphemeralPubKey}`
+5. Phone scans QR, extracts payload
+6. Phone generates its own ephemeral X25519 keypair
+7. Phone computes shared secret via ECDH: `ECDH(phoneSK, laptopPK)`
+8. Shared secret → HKDF with sessionId as salt → 256-bit AES-GCM key
+9. Phone sends its public key to Redis
+10. **Backend auto-approves pairing request** (no manual approval needed)
+11. Laptop retrieves phone's public key from Redis
+12. Laptop computes same shared secret: `ECDH(laptopSK, phonePK)`
+13. Both sides now have identical session key, **never transmitted over network**
+14. Phone redirects to control page → video stream starts immediately
 
 **Why This Is Secure:**
 - Session keys are derived using Elliptic Curve Diffie-Hellman (ECDH), meaning only the two devices can compute the shared secret
 - Vercel backend only sees ephemeral public keys (which are useless without the private keys)
 - Even if Redis is compromised, attacker cannot decrypt the session without both private keys
-- QR codes expire in 90 seconds to prevent replay attacks
+- QR codes expire in **60 seconds** to prevent replay attacks
+- Auto-approval is safe because QR code is short-lived and shown only on trusted laptop screen
 - WebRTC media is encrypted with DTLS-SRTP (standard WebRTC encryption)
 
 ### Key Types
@@ -92,8 +179,9 @@ TetherDesk supports two access methods:
 **1. One-Time Pairing Key (`TD-XXXXXX`)**
 - Generated when you run `npx tetherdesk`
 - Displayed alongside the QR code in terminal
-- Valid for 90 seconds
+- Valid for **60 seconds**
 - Single-use — consumed after connection
+- **Auto-approved** — no manual confirmation needed
 - Example: `TD-IU5RqiQh9ZAz0fuQafWV7Q`
 
 **2. Persistent API Key (`sk-xxx...`)**
