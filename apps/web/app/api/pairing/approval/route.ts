@@ -5,8 +5,6 @@ import { authenticateRequest, verifyAgentSecret } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-// How long an approval request stays pending before it auto-expires (90s = same as pairing token)
-const APPROVAL_REQUEST_TTL = 90;
 // How long the approval result is held so the agent can read it once (30s is plenty)
 const APPROVAL_RESULT_TTL = 30;
 
@@ -105,15 +103,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
       }
 
-      const payload = JSON.stringify({
-        sessionId,
-        requestedAt: Date.now(),
-        deviceFingerprint: body.deviceFingerprint ?? null,
-      });
-      await redis.set(redisKeys.approvalRequest(sessionId), payload, {
-        ex: APPROVAL_REQUEST_TTL,
-      });
-      return NextResponse.json({ ok: true });
+      // AUTO-APPROVE: Immediately approve all pairing requests without manual confirmation
+      // HP scan → backend auto-approves → HP goes directly to /control page
+      const approvalPayload = JSON.stringify({ status: "approved" as ApprovalStatus, decidedAt: Date.now() });
+      await redis.set(redisKeys.approvalResult(sessionId), approvalPayload, { ex: APPROVAL_RESULT_TTL });
+      
+      return NextResponse.json({ ok: true, data: { status: "approved" as ApprovalStatus } });
     }
 
     if (action === "respond") {

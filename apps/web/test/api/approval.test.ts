@@ -40,24 +40,25 @@ describe("POST & GET /api/pairing/approval", () => {
     expect(json.data.status).toBe("idle");
   });
 
-  it("POST action=request creates a pending request", async () => {
-    // 1. Post request
+  it("POST action=request auto-approves immediately", async () => {
+    // 1. Post request — backend now auto-approves all pairing requests
     const postReq = new NextRequest("http://localhost/api/pairing/approval", {
       method: "POST",
       body: JSON.stringify({ action: "request", sessionId: "test-session", deviceFingerprint: "fingerprint-123" }),
     });
     const postRes = await POST(postReq);
     expect(postRes.status).toBe(200);
+    const postJson = await postRes.json();
+    expect(postJson.ok).toBe(true);
+    expect(postJson.data.status).toBe("approved");
 
-    // 2. Get status should be pending
+    // 2. Get status should be approved (not pending)
     const getReq = new NextRequest("http://localhost/api/pairing/approval?sessionId=test-session");
     const getRes = await GET(getReq);
     expect(getRes.status).toBe(200);
     const json = await getRes.json();
     expect(json.ok).toBe(true);
-    expect(json.data.status).toBe("pending");
-    expect(json.data.sessionId).toBe("test-session");
-    expect(json.data.deviceFingerprint).toBe("fingerprint-123");
+    expect(json.data.status).toBe("approved");
   });
 
   it("POST action=respond updates status to approved or declined", async () => {

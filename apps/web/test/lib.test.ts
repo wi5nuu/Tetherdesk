@@ -8,8 +8,8 @@ import {
 } from "../lib/constants";
 
 describe("constants", () => {
-  it("pairing token TTL is 90 seconds", () => {
-    expect(PAIRING_TOKEN_TTL_SECONDS).toBe(90);
+  it("pairing token TTL is 60 seconds", () => {
+    expect(PAIRING_TOKEN_TTL_SECONDS).toBe(60);
   });
 
   it("session TTL is 24 hours", () => {

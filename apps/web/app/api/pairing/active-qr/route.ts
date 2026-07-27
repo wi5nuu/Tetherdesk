@@ -9,7 +9,7 @@ import { ErrorCode } from "@tetherdesk/protocol";
 export const runtime = "nodejs";
 
 const ACTIVE_QR_KEY = "dev:active-qr";
-const ACTIVE_QR_TTL = 120; // 2 minutes
+const ACTIVE_QR_TTL = 60; // 60 seconds
 
 /** Decode sessionId from a pairingUrl like "{origin}/pair/{base64url(json)}". */
 function sessionIdFromPairingUrl(pairingUrl: string): string | undefined {

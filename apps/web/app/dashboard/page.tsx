@@ -15,12 +15,6 @@ type QrPhase =
   | { phase: "ready"; qrDataUrl: string; pairingUrl: string; expiresAt: number }
   | { phase: "error"; message: string };
 
-type ApprovalPhase =
-  | { status: "idle" }
-  | { status: "pending"; sessionId: string; requestedAt: number }
-  | { status: "approved"; sessionId: string }
-  | { status: "declined"; sessionId: string };
-
 type ActivityEvent = {
   id: string;
   ts: number;
@@ -33,12 +27,6 @@ type ActivityEvent = {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function base64UrlDecode(str: string): string {
-  let s = str.replace(/-/g, "+").replace(/_/g, "/");
-  while (s.length % 4) s += "=";
-  return atob(s);
-}
 
 function stageLabel(stage: ActivityEvent["stage"]): string {
   const map: Record<ActivityEvent["stage"], string> = {
@@ -61,21 +49,17 @@ export default function HomePage() {
   const { tr } = useLang();
   const d = tr.dashboard;
   const [qr, setQr] = useState<QrPhase>({ phase: "loading" });
-  const [timeLeft, setTimeLeft] = useState(90);
-  const [approval, setApproval] = useState<ApprovalPhase>({ status: "idle" });
+  const [timeLeft, setTimeLeft] = useState(60);
   const [agentOnline, setAgentOnline] = useState(false);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [apiKeyCopied, setApiKeyCopied] = useState(false);
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
-  const [autoApprove, setAutoApprove] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasActiveClient, setHasActiveClient] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const approvalPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const currentSessionIdRef = useRef<string | null>(null);
   const laptopJwtRef = useRef<string | null>(null);
   const logEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -120,86 +104,17 @@ export default function HomePage() {
   }, [events]);
 
   // --------------------------------------------------------------------------
-  // Approval polling — runs whenever there's a sessionId to watch
+  // AUTO-APPROVE: Approval polling & manual respond removed
+  // All pairing requests are now auto-approved by backend (see /api/pairing/approval)
+  // HP scan QR → backend auto-approves → HP goes directly to /control page
   // --------------------------------------------------------------------------
-  const startApprovalPolling = useCallback((sessionId: string) => {
-    if (approvalPollRef.current) clearInterval(approvalPollRef.current);
-    currentSessionIdRef.current = sessionId;
-
-    const poll = async () => {
-      if (currentSessionIdRef.current !== sessionId) return;
-      try {
-        const resp = await fetch(
-          `/api/pairing/approval?sessionId=${encodeURIComponent(sessionId)}`,
-          { cache: "no-store" },
-        );
-        if (!resp.ok) return; // 404 = no request yet, keep polling
-        const json = (await resp.json()) as {
-          ok: boolean;
-          data?: { status: "idle" | "pending" | "approved" | "declined"; sessionId?: string; requestedAt?: number };
-        };
-        if (!json.ok || !json.data) return;
-        const { status, requestedAt } = json.data;
-
-        // idle means no phone request yet — keep polling silently
-        if (status === "idle") return;
-
-        if (status === "pending") {
-          setApproval({ status: "pending", sessionId, requestedAt: requestedAt ?? Date.now() });
-        } else if (status === "approved") {
-          setApproval({ status: "approved", sessionId });
-          clearInterval(approvalPollRef.current!);
-          approvalPollRef.current = null;
-        } else if (status === "declined") {
-          setApproval({ status: "declined", sessionId });
-          clearInterval(approvalPollRef.current!);
-          approvalPollRef.current = null;
-        }
-      } catch { /* transient — keep polling */ }
-    };
-
-    approvalPollRef.current = setInterval(() => { void poll(); }, 2_000);
-    void poll(); // immediate first check
-  }, []);
-
-  // --------------------------------------------------------------------------
-  // Respond to approval request (approve / decline)
-  // --------------------------------------------------------------------------
-  const respondToApproval = useCallback(async (sessionId: string, approved: boolean) => {
-    try {
-      const laptopJwt = laptopJwtRef.current;
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (laptopJwt) {
-        headers["Authorization"] = `Bearer ${laptopJwt}`;
-      }
-      if (!laptopJwt) {
-        addToast("error", "Session expired — click QR Baru and pair again");
-        return;
-      }
-      const resp = await fetch("/api/pairing/approval", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ action: "respond", sessionId, approved }),
-      });
-      if (resp.ok) {
-        setApproval({ status: approved ? "approved" : "declined", sessionId });
-        addToast(approved ? "success" : "info", approved ? "Connection approved" : "Connection declined");
-        if (approvalPollRef.current) { clearInterval(approvalPollRef.current); approvalPollRef.current = null; }
-      } else {
-        const data = await resp.json().catch(() => null) as { error?: string } | null;
-        addToast("error", data?.error ?? `Approval failed (HTTP ${resp.status}) — try QR Baru`);
-      }
-    } catch {
-      addToast("error", "Failed to respond to approval request");
-    }
-  }, [addToast]);
 
   // --------------------------------------------------------------------------
   // QR generation
   // --------------------------------------------------------------------------
   const generateQr = useCallback(async () => {
     setQr({ phase: "loading" });
-    setTimeLeft(90);
+    setTimeLeft(60);
 
     try {
       const QRCode = (await import("qrcode")).default;
@@ -216,17 +131,6 @@ export default function HomePage() {
 
           // Store laptop JWT from active-qr response — available before pairingToken is consumed
           if (activeData.data.laptopJwt) laptopJwtRef.current = activeData.data.laptopJwt;
-
-          // Extract sessionId from the pairingUrl for approval polling
-          try {
-            const b64 = pairingUrl.split("/pair/")[1];
-            if (b64) {
-              const decoded = JSON.parse(base64UrlDecode(b64)) as { sessionId?: string };
-              if (decoded.sessionId) {
-                startApprovalPolling(decoded.sessionId);
-              }
-            }
-          } catch { /* best-effort */ }
 
           const qrDataUrl = await QRCode.toDataURL(pairingUrl, {
             width: 300, margin: 2,
@@ -253,7 +157,7 @@ export default function HomePage() {
       const errMsg = err instanceof Error ? err.message : "Unknown error";
       setQr({ phase: "error", message: errMsg });
     }
-  }, [startApprovalPolling, addToast, d.newQr]);
+  }, [addToast, d.newQr]);
 
   // --------------------------------------------------------------------------
   // API key generation
@@ -262,14 +166,13 @@ export default function HomePage() {
     setApiKeyError(null);
     setApiKey(null);
     try {
-      const sid = currentSessionIdRef.current;
       const laptopJwt = laptopJwtRef.current;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (laptopJwt) headers["Authorization"] = `Bearer ${laptopJwt}`;
       const resp = await fetch("/api/access/keys", {
         method: "POST",
         headers,
-        body: JSON.stringify(sid ? { sessionId: sid } : {}),
+        body: JSON.stringify({}),
       });
       const data = (await resp.json()) as { ok: boolean; data?: { apiKey: string }; error?: { message: string } };
       if (data.ok && data.data) {
@@ -303,15 +206,11 @@ export default function HomePage() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (refreshRef.current) clearTimeout(refreshRef.current);
-      if (approvalPollRef.current) clearInterval(approvalPollRef.current);
     };
   }, [generateQr]);
 
-  // Reset approval state when QR refreshes
+  // Reset QR when user clicks refresh
   const handleRefreshQr = () => {
-    setApproval({ status: "idle" });
-    if (approvalPollRef.current) { clearInterval(approvalPollRef.current); approvalPollRef.current = null; }
-    currentSessionIdRef.current = null;
     void generateQr();
   };
 
@@ -319,61 +218,9 @@ export default function HomePage() {
   // Render
   // ---------------------------------------------------------------------------
 
-  const showApprovalModal = approval.status === "pending";
-  const pendingSessionId = approval.status === "pending" ? approval.sessionId : null;
-
   return (
     <div style={s.root}>
       <Navbar />
-      {/* Approval modal */}
-      {showApprovalModal && pendingSessionId && (
-          <div
-            style={s.overlay}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="approval-title"
-            aria-describedby="approval-desc"
-            onClick={(e) => { if (e.target === e.currentTarget) setApproval({ status: "idle" }); }}
-            onKeyDown={(e) => { if (e.key === "Escape") setApproval({ status: "idle" }); }}
-            tabIndex={-1}
-            ref={(el) => { el?.focus(); }}
-          >
-            <div style={s.modal}>
-              <div style={s.modalHeader}>
-                <span style={s.modalDot} />
-                <span style={s.modalLabel}>{d.approvalTitle}</span>
-              </div>
-              <h2 id="approval-title" style={s.modalTitle}>
-                {d.approvalTitle}
-              </h2>
-              <p id="approval-desc" style={s.modalBody}>
-                {d.approvalBody}
-              </p>
-            <div style={s.modalMeta}>
-              {d.approvalSession}{" "}
-              <code style={s.monoChip}>
-                {pendingSessionId.slice(0, 8)}&hellip;{pendingSessionId.slice(-4)}
-              </code>
-            </div>
-            <div style={s.modalActions}>
-              <button
-                className="btn-allow"
-                style={s.allowBtn}
-                onClick={() => { void respondToApproval(pendingSessionId, true); }}
-              >
-                {d.allow}
-              </button>
-              <button
-                className="btn-deny"
-                style={s.denyBtn}
-                onClick={() => { void respondToApproval(pendingSessionId, false); }}
-              >
-                {d.deny}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Mobile hamburger menu */}
       <button
@@ -465,33 +312,6 @@ export default function HomePage() {
           </div>
         </header>
 
-        {approval.status === "approved" && (
-          <div
-            style={{
-              ...s.banner,
-              background: "#052e16",
-              border: "1px solid #166534",
-              color: "#4ade80",
-            }}
-            role="status"
-          >
-            {d.approved} {"\u2014"} remote session is active
-          </div>
-        )}
-        {approval.status === "declined" && (
-          <div
-            style={{
-              ...s.banner,
-              background: "#1a0505",
-              border: "1px solid #7f1d1d",
-              color: "#f87171",
-            }}
-            role="status"
-          >
-            {d.declined}
-          </div>
-        )}
-
         {!agentOnline ? (
           <div style={s.offlineState}>
             <div style={s.spinner} aria-hidden="true" />
@@ -514,7 +334,7 @@ export default function HomePage() {
               </div>
               <div style={{ padding: "16px 20px", textAlign: "center" }}>
                 <div style={{ fontSize: 13, color: "#4ade80", marginBottom: 8, fontWeight: 500 }}>
-                  &#10003; {d.approved}
+                  &#10003; {"Connected"}
                 </div>
                 <button
                   className="btn-secondary"
@@ -626,17 +446,17 @@ export default function HomePage() {
                 <div style={s.cardSub}>{d.clientsSub}</div>
               </div>
               <span style={s.navChip}>
-                {approval.status === "approved" ? "1/1 online" : "0/1 online"}
+                {hasActiveClient ? "1/1 online" : "0/1 online"}
               </span>
             </div>
 
             <div style={s.clientList}>
-              {approval.status === "approved" && (
+              {hasActiveClient && (
                 <div className="client-row-hover" style={s.clientRow}>
                   <div style={{ ...s.clientDot, background: "#4ade80" }} />
                   <div style={s.clientInfo}>
                     <div style={s.clientName}>Phone</div>
-                    <div style={s.clientMeta}>{d.approved}</div>
+                    <div style={s.clientMeta}>Connected</div>
                   </div>
                   <span
                     style={{
@@ -651,7 +471,7 @@ export default function HomePage() {
                   </span>
                 </div>
               )}
-              {approval.status !== "approved" && (
+              {!hasActiveClient && (
                 <div style={s.emptyState}>
                   <p style={s.emptyText}>{d.noClients}</p>
                   <p style={s.emptyHint}>{d.noClientsHint}</p>
@@ -659,26 +479,7 @@ export default function HomePage() {
               )}
             </div>
 
-            <div style={s.settingRow}>
-              <div style={s.settingLeft}>
-                <div style={s.settingLabel}>
-                  &#9634; {d.autoApprove}
-                </div>
-                <div style={s.settingHint}>
-                  {d.autoApproveHint}
-                </div>
-              </div>
-              <div
-                className="toggle-hover"
-                style={autoApprove ? s.toggleOn : s.toggleOff}
-                role="switch"
-                aria-checked={autoApprove}
-                aria-label="Auto-approve"
-                tabIndex={0}
-                onClick={() => setAutoApprove(!autoApprove)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setAutoApprove(!autoApprove); } }}
-              />
-            </div>
+            {/* Auto-approve removed — all pairing requests are now auto-approved by backend */}
           </div>
 
           {/* How to pair card */}
@@ -711,9 +512,7 @@ export default function HomePage() {
                 <div style={s.stepNum}>3</div>
                 <div>
                   <div style={s.stepTitle}>{d.step3Title}</div>
-                  <div style={s.stepHint}>
-                    {d.step3Hint} <strong style={{ color: "#4ade80" }}>{d.step3Allow}</strong> {d.step3Hint2}
-                  </div>
+                  <div style={s.stepHint}>{d.step3Hint}</div>
                 </div>
               </li>
               <li style={s.step}>
