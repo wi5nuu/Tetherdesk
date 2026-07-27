@@ -455,12 +455,16 @@ export default function ControlPage() {
       }
     };
 
-    // Screen video track (Section 8)
+    // Screen video track (Section 8).
+    // BUG-V1: evt.streams[0] can be undefined in some WebRTC implementations
+    // (e.g. @roamhq/wrtc calling addTrack without explicit stream arg).
+    // Fall back to constructing a MediaStream from the track itself so the
+    // phone always receives video instead of a black screen.
     pc.ontrack = (evt) => {
-      if (videoRef.current && evt.streams[0]) {
-        videoRef.current.srcObject = evt.streams[0];
-        setVideoReceived(true);
-      }
+      if (!videoRef.current) return;
+      const stream = evt.streams[0] ?? new MediaStream([evt.track]);
+      videoRef.current.srcObject = stream;
+      setVideoReceived(true);
     };
 
     // Reset video flag on new connection
@@ -781,7 +785,9 @@ export default function ControlPage() {
         <div style={styles.videoHint}>
           <span style={{ fontSize: 13, color: "#fbbf24" }}>&#9888;</span>
           <span style={styles.videoHintText}>
-            Connected but no video — on the laptop, run: <code style={{ color: "#4ade80", fontSize: 11 }}>npm install -g @roamhq/wrtc</code>
+            Connected but no video — ensure the TetherDesk agent is running on the laptop ({" "}
+            <code style={{ color: "#4ade80", fontSize: 11 }}>npx tetherdesk</code>
+            {" "}) and check the terminal for errors.
           </span>
         </div>
       )}
