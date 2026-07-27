@@ -554,13 +554,20 @@ export class TetherDeskAgent {
   private async _startWebRTC(): Promise<void> {
     void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "info", stage: "webrtc", message: "Starting WebRTC — initializing screen capture", ...(this.sessionId && { sessionId: this.sessionId }) });
 
-    // Build ICE server list (Section 12.3 / 12.4)
-    const iceServers = [...DEFAULT_STUN_SERVERS];
-    if (this.config.enableTurn && this.config.turnUrl) {
-      const turnEntry: RTCIceServer = { urls: this.config.turnUrl };
-      if (this.config.turnUsername) turnEntry.username = this.config.turnUsername;
-      if (this.config.turnCredential) turnEntry.credential = this.config.turnCredential;
-      iceServers.push(turnEntry);
+    let iceServers: RTCIceServer[] = [...DEFAULT_STUN_SERVERS];
+    try {
+      const res = await fetch(`${this.config.backendOrigin}/api/turn-credentials`, {
+        headers: { Authorization: `Bearer ${this.config.agentSecret}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const body = (await res.json()) as { ok?: boolean; data?: { iceServers?: RTCIceServer[] } };
+        if (body?.ok && Array.isArray(body.data?.iceServers) && body.data!.iceServers!.length > 0) {
+          iceServers = body.data!.iceServers!;
+        }
+      }
+    } catch {
+      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "warn", stage: "webrtc", message: "TURN credentials fetch failed — using STUN-only fallback" });
     }
 
     // Get screen capture and start capturing.
@@ -672,11 +679,7 @@ export class TetherDeskAgent {
             height: resolution.height,
           });
         } else if (state === "failed") {
-          const noTurn = !this.config.enableTurn;
-          const msg = noTurn
-            ? "WebRTC connection failed — no TURN relay configured."
-            : "WebRTC connection failed — check TURN credentials.";
-          void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "error", stage: "webrtc", message: msg, ...(this.sessionId && { sessionId: this.sessionId }) });
+          void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "error", stage: "webrtc", message: "WebRTC connection failed — ICE could not establish path. Check network connectivity.", ...(this.sessionId && { sessionId: this.sessionId }) });
         } else if (state === "disconnected") {
           void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "warn", stage: "connection", message: "Phone disconnected — waiting for reconnect", ...(this.sessionId && { sessionId: this.sessionId }) });
         }

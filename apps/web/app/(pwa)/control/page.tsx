@@ -386,23 +386,22 @@ export default function ControlPage() {
     const session = sessionRef.current;
     if (!session) return;
 
-    const iceServers: RTCIceServer[] = [
+    let iceServers: RTCIceServer[] = [
       { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com.l.google.com:19302" },
     ];
 
-    // Wire in TURN if configured
-    // NOTE (S-5): NEXT_PUBLIC_ env vars are embedded in the client bundle by Next.js.
-    // This is intentional — WebRTC ICE requires the client to have TURN credentials at
-    // connection time. The credentials are ephemeral (short TTL) and scoped to relay-only.
-    // Server-side credential rotation (via /api/turn-credentials) should replace this in
-    // production to avoid long-lived credentials in the bundle.
-    const turnUrl = process.env["NEXT_PUBLIC_TURN_URL"];
-    const turnUsername = process.env["NEXT_PUBLIC_TURN_USERNAME"];
-    const turnCredential = process.env["NEXT_PUBLIC_TURN_CREDENTIAL"];
-    if (turnUrl && turnUsername && turnCredential) {
-      iceServers.push({ urls: turnUrl, username: turnUsername, credential: turnCredential });
-    }
+    try {
+      const res = await fetch("/api/turn-credentials", {
+        headers: { Authorization: `Bearer ${session.bearerToken}` },
+      });
+      if (res.ok) {
+        const body = await res.json();
+        if (body?.ok && Array.isArray(body.data?.iceServers) && body.data.iceServers.length > 0) {
+          iceServers = body.data.iceServers;
+        }
+      }
+    } catch { /* STUN-only fallback */ }
 
     const pc = new RTCPeerConnection({ iceServers });
     peerRef.current = pc;
@@ -441,15 +440,8 @@ export default function ControlPage() {
         pc.connectionState === "failed" ||
         pc.connectionState === "disconnected"
       ) {
-        // FR-8: distinguish no-TURN ICE failure from other failures
         if (pc.iceConnectionState === "failed") {
-          const noTurn = !turnUrl;
-          setError(
-            noTurn
-              ? "Could not establish a direct connection. Some networks require a relay. " +
-                "See docs/runbooks/nat-traversal.md to enable an optional TURN relay."
-              : "Connection failed despite TURN relay. Check relay credentials.",
-          );
+          setError("Connection failed. Both direct and relay paths were tried. Check your internet connection and try again.");
         }
         scheduleReconnect();
       }
