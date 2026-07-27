@@ -213,11 +213,12 @@ Scan this QR code with your phone:
 
 
 Session ID: XPbIlbgNQivsd3bC
-Pairing token expires in 90 seconds.
+Pairing token expires in 60 seconds.
 
   [QR code — scan with phone camera]
 
-Open https://tetherdesk-five.vercel.app/dashboard on your laptop to approve the connection.
+The connection is auto-approved — no manual action needed.
+Your phone goes directly to the remote control page.
 
 WebSocket failed — falling back to long-poll signaling
 Signaling connected
@@ -231,10 +232,10 @@ Signaling connected
   Steps:
   1. Open dashboard: https://tetherdesk-five.vercel.app/dashboard
   2. Enter key above in the "Access Key" field
-  3. Click Allow on this laptop when prompted
+  3. Your phone connects automatically — no Allow needed
   4. Your phone can now control this laptop
 
-  (Key expires in 90 seconds — a new one will appear automatically)`}</CodeBlock>
+  (Key expires in 60 seconds — a new one will appear automatically)`}</CodeBlock>
 
           <p style={s.p}>{d.qsPhoneSteps}</p>
           <ol style={s.ul}>
@@ -505,11 +506,12 @@ Scan this QR code with your phone:
 
 
 Session ID: XPbIlbgNQivsd3bC
-Pairing token expires in 90 seconds.
+Pairing token expires in 60 seconds.
 
   [QR code — scan with phone camera]
 
-Open https://tetherdesk-five.vercel.app/dashboard on your laptop to approve the connection.
+The connection is auto-approved — no manual action needed.
+Your phone goes directly to the remote control page.
 
   ╔══════════════════════════════════╗
   ║       YOUR ACCESS KEY            ║
@@ -520,10 +522,10 @@ Open https://tetherdesk-five.vercel.app/dashboard on your laptop to approve the 
   Steps:
   1. Open dashboard: https://tetherdesk-five.vercel.app/dashboard
   2. Enter key above in the "Access Key" field
-  3. Click Allow on this laptop when prompted
+  3. Your phone connects automatically — no Allow needed
   4. Your phone can now control this laptop
 
-  (Key expires in 90 seconds — a new one will appear automatically)`}</CodeBlock>
+  (Key expires in 60 seconds — a new one will appear automatically)`}</CodeBlock>
           </div>
 
           <div style={s.card}>
