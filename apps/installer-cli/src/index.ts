@@ -232,4 +232,36 @@ function formatUptime(seconds: number): string {
   return `${h}h ${m}m`;
 }
 
+program
+  .command("update")
+  .description("Check for updates and show upgrade instructions")
+  .action(async () => {
+    console.log(pc.bold(pc.green("\nTetherDesk Update Check\n")));
+    console.log(pc.dim(`  Current version: v${version}\n`));
+    try {
+      const res = await fetch("https://registry.npmjs.org/tetherdesk/latest", {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) {
+        console.log(pc.yellow("  Could not check for updates. Check your internet connection.\n"));
+        return;
+      }
+      const data = await res.json() as { version?: string };
+      if (!data.version) {
+        console.log(pc.yellow("  Could not determine latest version.\n"));
+        return;
+      }
+      if (data.version === version) {
+        console.log(pc.green("  ✓ You have the latest version.\n"));
+      } else {
+        console.log(pc.yellow(`  Update available: v${version} → v${data.version}\n`));
+        console.log(pc.white("  To update:"));
+        console.log(pc.cyan("    npm update -g tetherdesk"));
+        console.log(pc.cyan("    npx tetherdesk --version\n"));
+      }
+    } catch {
+      console.log(pc.yellow("  Could not check for updates. Check your internet connection.\n"));
+    }
+  });
+
 program.parse();

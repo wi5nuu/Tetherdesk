@@ -613,6 +613,20 @@ Your phone goes directly to the remote control page.
               {d.faqOsA} <a href="https://github.com/wi5nuu/Tetherdesk" style={{ color: "#4ade80" }} target="_blank" rel="noopener noreferrer">GitHub</a>.
             </div>
           </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.faqUpdateQ}</div>
+            <div style={s.cardDesc}>
+              {(() => { const p = d.faqUpdateA.split("{cmd}"); return p.length === 2 ? <>{p[0]}<Code>npm update -g tetherdesk</Code>{p[1]}</> : d.faqUpdateA; })()}
+            </div>
+          </div>
+
+          <div style={s.card}>
+            <div style={s.cardTitle}>{d.faqChangelogQ}</div>
+            <div style={s.cardDesc}>
+              {(() => { const p = d.faqChangelogA.split("{github}"); return <>{p[0]}<a href="https://github.com/wi5nuu/Tetherdesk/releases" style={{ color: "#4ade80" }} target="_blank" rel="noopener noreferrer">GitHub Releases</a>{p[1]}</>; })()}
+            </div>
+          </div>
         </section>
 
         <Footer />

@@ -7,6 +7,9 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import pc from "picocolors";
 
+const { version: CURRENT_VERSION } = (createRequire(import.meta.url))("../package.json") as { version: string };
+const NPM_PACKAGE_NAME = "tetherdesk";
+
 const AGENT_DIR = join(homedir(), ".tetherdesk");
 const CONFIG_PATH = join(AGENT_DIR, "config.json");
 
@@ -119,7 +122,38 @@ export interface StartOptions {
   domain?: string;
 }
 
+async function checkForUpdate(): Promise<string | null> {
+  try {
+    const res = await fetch(`https://registry.npmjs.org/${NPM_PACKAGE_NAME}/latest`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { version?: string };
+    if (!data.version || data.version === CURRENT_VERSION) return null;
+    const current = CURRENT_VERSION.split(".").map(Number);
+    const latest = data.version.split(".").map(Number);
+    for (let i = 0; i < Math.max(current.length, latest.length); i++) {
+      if ((latest[i] ?? 0) > (current[i] ?? 0)) return data.version;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function runStart(options: StartOptions = {}): Promise<void> {
+  // ── Check for updates (non-blocking, best-effort) ──────────────────────────
+  void (async () => {
+    const latest = await checkForUpdate();
+    if (latest) {
+      console.log(pc.yellow(`\n  ╔══════════════════════════════════════════╗`));
+      console.log(pc.yellow(`  ║  Update available: v${CURRENT_VERSION} → v${latest}  ║`));
+      console.log(pc.yellow(`  ║  Run: npm update -g tetherdesk           ║`));
+      console.log(pc.yellow(`  ║  Or: npx tetherdesk --version            ║`));
+      console.log(pc.yellow(`  ╚══════════════════════════════════════════╝\n`));
+    }
+  })();
+
   const procs: ChildProcess[] = [];
   await mkdir(AGENT_DIR, { recursive: true });
 
@@ -192,10 +226,11 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
 
   // ── Print instructions ─────────────────────────────────────────────────────
   console.log(pc.bold(pc.green(" TetherDesk is running!\n")));
+  console.log(pc.dim(`  Version: ${CURRENT_VERSION}`));
   console.log(pc.cyan("  Dashboard: ") + pc.bold(`${backendUrl}/dashboard`));
+  console.log(pc.cyan("  Docs:      ") + pc.bold(`${backendUrl}/docs`));
   console.log(pc.dim("\n  Waiting for access key…"));
-  console.log(pc.dim("  Press Ctrl+C to stop."));
-  console.log(pc.dim("\n  Created by Wisnu Alfian Nur Ashar\n"));
+  console.log(pc.dim("  Press Ctrl+C to stop.\n"));
 
   // ── Poll for pairing key and print it ─────────────────────────────────────
   void (async () => {
@@ -227,7 +262,7 @@ export async function runStart(options: StartOptions = {}): Promise<void> {
         }
         if (!token) continue;
 
-        console.log(pc.dim(`  (Access key expires in 90 seconds — a new one will appear automatically)`));
+        console.log(pc.dim(`  (Access key expires in 60 seconds — a new one will appear automatically)`));
         return;
       } catch {
         // keep polling
