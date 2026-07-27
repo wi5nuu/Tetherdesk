@@ -35,6 +35,9 @@ importers:
       '@jitsi/robotjs':
         specifier: 0.6.24
         version: 0.6.24
+      '@roamhq/wrtc':
+        specifier: ^0.10.0
+        version: 0.10.0
       '@tetherdesk/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
@@ -90,10 +93,6 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
-    optionalDependencies:
-      '@roamhq/wrtc':
-        specifier: ^0.10.0
-        version: 0.10.0
 
   apps/installer-cli:
     dependencies:
