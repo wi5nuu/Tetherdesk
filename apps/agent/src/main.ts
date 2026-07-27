@@ -89,6 +89,25 @@ program
 
     try {
       await agent.initialize();
+
+      // CRITICAL: Check screen capture permission BEFORE starting pairing
+      // If permission is denied, agent will run with data channel only (NO VIDEO)
+      // → Phone will show BLANK SCREEN with controls (bad UX)
+      // → FAIL FAST here to force user to grant permission first
+      console.log("\n[TetherDesk] Checking screen capture permission...");
+      const permCheck = await agent.checkScreenCapturePermission();
+      if (!permCheck.granted) {
+        console.error("\n❌ Screen capture permission DENIED or unavailable.");
+        console.error("   Video stream will NOT work — phone will show BLANK SCREEN.\n");
+        if (permCheck.instructions) {
+          console.error("   " + permCheck.instructions);
+        }
+        console.error("\n   Please grant screen recording permission and restart agent.");
+        console.error("   Agent will NOT start until permission is granted.\n");
+        process.exit(1);
+      }
+      console.log("✅ Screen capture permission granted.\n");
+
       await agent.startPairing();
 
       // Keep process alive; SIGTERM/SIGINT handled for clean shutdown

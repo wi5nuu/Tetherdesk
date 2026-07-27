@@ -184,6 +184,28 @@ export class TetherDeskAgent {
     void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "success", stage: "agent", message: "Agent initialized — ready to pair" });
   }
 
+  /**
+   * Check if screen capture permission is granted before starting pairing.
+   * This prevents agent from running with data channel only (no video) which
+   * results in blank screen on phone with controls visible (bad UX).
+   * 
+   * CRITICAL: Agent MUST NOT start pairing if permission is denied — fail fast
+   * and force user to grant permission first.
+   */
+  async checkScreenCapturePermission(): Promise<{ granted: boolean; instructions?: string }> {
+    try {
+      const capture = getScreenCapture();
+      const result = await capture.checkPermissions();
+      return result;
+    } catch (err) {
+      // Screen capture module unavailable — treat as permission denied
+      return {
+        granted: false,
+        instructions: `Screen capture initialization failed: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
+
   async startPairing(): Promise<void> {
     if (!this.identityKeyPair) {
       throw new Error("Agent not initialized — call initialize() first");
@@ -295,6 +317,12 @@ export class TetherDeskAgent {
     if (this.framePumpAbort) {
       this.framePumpAbort.abort();
       this.framePumpAbort = null;
+    }
+    // Stop screen capture — abort alone doesn't stop the screenshot-desktop interval
+    // running inside WindowsScreenCapture. Call stop() to set this.running = false.
+    if (this.screenCapture) {
+      try { await this.screenCapture.stop(); } catch { /* best-effort */ }
+      this.screenCapture = null;
     }
     // BUG-1: clean up the singleton injector
     if (this.inputInjector) {
@@ -550,7 +578,11 @@ export class TetherDeskAgent {
       void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "info", stage: "webrtc", message: `Screen resolution: ${resolution.width}x${resolution.height}` });
       videoStream = await capture.start();
     } catch (err) {
-      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "warn", stage: "webrtc", message: `Screen capture unavailable: ${err instanceof Error ? err.message : String(err)}` });
+      const errMsg = err instanceof Error ? err.message : String(err);
+      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "error", stage: "webrtc", message: `Screen capture FAILED: ${errMsg}. Video stream will not be available — phone will show blank screen. Grant screen recording permission and restart agent.` });
+      console.error(`[TetherDesk] Screen capture FAILED: ${errMsg}`);
+      console.error("[TetherDesk] Video stream will NOT be sent to phone — data channel only (blank screen).");
+      console.error("[TetherDesk] Fix: Grant screen recording permission in System Settings and restart agent.");
     }
 
     // Read first frame to get a MediaStreamTrack-compatible source.
@@ -598,8 +630,13 @@ export class TetherDeskAgent {
       })().catch((err: unknown) => {
         void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "error", stage: "webrtc", message: `Frame pump error: ${err instanceof Error ? err.message : String(err)}` });
       });
-    } catch {
+    } catch (err) {
       videoTrack = null;
+      const errMsg = err instanceof Error ? err.message : String(err);
+      void pushEvent(this.config.backendOrigin, this.config.agentSecret, { level: "error", stage: "webrtc", message: `WebRTC video track creation FAILED: ${errMsg}. Phone will receive data channel only (no video stream).` });
+      console.error(`[TetherDesk] WebRTC video track FAILED: ${errMsg}`);
+      console.error("[TetherDesk] Possible causes: @roamhq/wrtc not installed, RTCVideoSource not available, or screen capture failed.");
+      console.error("[TetherDesk] Phone will show BLANK SCREEN (data channel only — controls work but no video).");
     }
 
     // BUG-1: initialize inputInjector once as a class field, not per-message
